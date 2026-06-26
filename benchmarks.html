@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Codec Benchmarks</title>
+		<style>
+			:root {
+				color-scheme: light dark;
+				font-family:
+					Inter,
+					ui-sans-serif,
+					system-ui,
+					-apple-system,
+					BlinkMacSystemFont,
+					"Segoe UI",
+					sans-serif;
+			}
+
+			body {
+				margin: 24px;
+			}
+
+			header {
+				margin-bottom: 18px;
+			}
+
+			h1 {
+				font-size: 22px;
+				font-weight: 650;
+				margin: 0 0 6px;
+			}
+
+			p {
+				color: color-mix(in srgb, CanvasText 70%, Canvas);
+				margin: 0;
+			}
+
+			table {
+				border-collapse: collapse;
+				font-size: 13px;
+				width: 100%;
+			}
+
+			th,
+			td {
+				border-bottom: 1px solid color-mix(in srgb, CanvasText 14%, Canvas);
+				padding: 7px 9px;
+				text-align: left;
+				white-space: nowrap;
+			}
+
+			th {
+				background: color-mix(in srgb, CanvasText 6%, Canvas);
+				font-weight: 650;
+				position: sticky;
+				top: 0;
+			}
+
+			td.number,
+			th.number {
+				text-align: right;
+			}
+
+			tr.best {
+				background: color-mix(in srgb, #24a148 12%, Canvas);
+			}
+
+			.status {
+				border-radius: 999px;
+				display: inline-block;
+				font-size: 12px;
+				padding: 2px 7px;
+			}
+
+			.ok {
+				background: color-mix(in srgb, #24a148 16%, Canvas);
+			}
+
+			.skipped,
+			.failed {
+				background: color-mix(in srgb, #f1c21b 20%, Canvas);
+			}
+		</style>
+	</head>
+	<body>
+		<img id="benchmark-results" src="./benchmarks/results.json" alt="" hidden />
+		<header>
+			<h1>codec benchmarks</h1>
+			<p id="summary">Loading benchmarks/results.json...</p>
+		</header>
+		<table>
+			<thead>
+				<tr>
+					<th>Case</th>
+					<th>Serializer</th>
+					<th>Format</th>
+					<th class="number">Bytes</th>
+					<th class="number">Size vs JSON</th>
+					<th class="number">Encode us</th>
+					<th class="number">Decode us</th>
+					<th class="number">Round trip us</th>
+					<th class="number">Round trip vs JSON</th>
+					<th>Status</th>
+				</tr>
+			</thead>
+			<tbody id="rows"></tbody>
+		</table>
+		<script type="module">
+			const rows = document.querySelector("#rows");
+			const summary = document.querySelector("#summary");
+			const resultsUrl = document.querySelector("#benchmark-results").src;
+			const response = await fetch(resultsUrl, { cache: "no-store" });
+			const report = await response.json();
+			const tableRows = flattenReport(report);
+
+			rows.replaceChildren(...tableRows.map(renderRow));
+			summary.textContent = `${tableRows.length} rows from ${report.cases.length} cases, generated ${new Date(
+				report.generatedAt,
+			).toLocaleString()}`;
+
+			function flattenReport(report) {
+				return report.cases.flatMap((benchmarkCase) => {
+					const okResults = benchmarkCase.results.filter(
+						(result) => result.status === "ok",
+					);
+					const jsonResult = okResults.find((result) => result.name === "json");
+					const bestRoundTrip = Math.min(
+						...okResults.map((result) => result.roundTrip.medianMs),
+					);
+
+					return benchmarkCase.results
+						.map((result) => ({
+							bytes: result.bytes,
+							caseName: benchmarkCase.name,
+							decodeUs: result.decode && result.decode.medianMs * 1000,
+							encodeUs: result.encode && result.encode.medianMs * 1000,
+							format: result.format,
+							isBest:
+								result.status === "ok" &&
+								result.roundTrip.medianMs === bestRoundTrip,
+							roundTripUs: result.roundTrip && result.roundTrip.medianMs * 1000,
+							serializer: result.name,
+							sizeVsJson:
+								result.bytes && jsonResult
+									? result.bytes / jsonResult.bytes
+									: undefined,
+							status: result.status,
+							statusText: result.error || result.reason || result.status,
+							vsJson:
+								result.roundTrip && jsonResult
+									? result.roundTrip.medianMs / jsonResult.roundTrip.medianMs
+									: undefined,
+						}))
+						.sort((left, right) => {
+							if (left.status !== "ok" && right.status === "ok") return 1;
+							if (left.status === "ok" && right.status !== "ok") return -1;
+							return (
+								(left.roundTripUs ?? Infinity) - (right.roundTripUs ?? Infinity)
+							);
+						});
+				});
+			}
+
+			function renderRow(row) {
+				const tr = document.createElement("tr");
+				if (row.isBest) tr.className = "best";
+				appendCell(tr, row.caseName);
+				appendCell(tr, row.serializer);
+				appendCell(tr, row.format);
+				appendCell(tr, formatInteger(row.bytes), "number");
+				appendCell(tr, formatRatio(row.sizeVsJson), "number");
+				appendCell(tr, formatNumber(row.encodeUs), "number");
+				appendCell(tr, formatNumber(row.decodeUs), "number");
+				appendCell(tr, formatNumber(row.roundTripUs), "number");
+				appendCell(tr, formatRatio(row.vsJson), "number");
+				const status = document.createElement("td");
+				status.title = row.statusText;
+				status.innerHTML = `<span class="status ${row.status}">${row.status}</span>`;
+				tr.append(status);
+				return tr;
+			}
+
+			function appendCell(row, value, className) {
+				const cell = document.createElement("td");
+				if (className) cell.className = className;
+				cell.textContent = value ?? "";
+				row.append(cell);
+			}
+
+			function formatInteger(value) {
+				return value === undefined ? "" : Math.round(value).toLocaleString();
+			}
+
+			function formatNumber(value) {
+				return value === undefined ? "" : value.toFixed(value < 10 ? 2 : 1);
+			}
+
+			function formatRatio(value) {
+				return value === undefined ? "" : `${value.toFixed(2)}x`;
+			}
+		</script>
+	</body>
+</html>

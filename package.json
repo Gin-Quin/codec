@@ -1,0 +1,19 @@
+{
+	"name": "@gin-quin/codec",
+	"module": "source/index.ts",
+	"type": "module",
+	"private": true,
+	"exports": {
+		"./*": "./source/*.ts"
+	},
+	"scripts": {
+		"benchmark": "bun ./benchmarks/index.ts",
+		"benchmark:save": "bun ./benchmarks/index.ts > ./benchmarks/benchmark-results.json"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	}
+}
