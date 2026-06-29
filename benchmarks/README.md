@@ -9,7 +9,8 @@ bun run benchmark
 ```
 
 The default output is a JSON report and the same report is saved to
-`benchmarks/results.json`.
+`benchmarks/results.json`. A Markdown report with the same benchmark tables is
+also saved to `BENCHMARKS.md` at the repository root.
 
 ## CLI
 
@@ -38,7 +39,6 @@ Available serializers:
 - `codec`
 - `json`
 - `bunker`
-- `bunker-schema`
 - `msgpackr`
 - `msgpackr-records`
 - `@msgpack/msgpack`

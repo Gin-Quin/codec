@@ -1,9 +1,4 @@
-import {
-	createDecoder,
-	createEncoder,
-	type Decoder,
-	toUint8Array,
-} from "./binary";
+import { createDecoder, createEncoder, type Decoder, toUint8Array } from "./binary";
 import { compileReader, compileWriter } from "./compiler";
 import type { InferType, Schema } from "./schema";
 

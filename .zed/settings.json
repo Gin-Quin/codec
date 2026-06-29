@@ -1,0 +1,33 @@
+{
+	"format_on_save": "on",
+
+	"languages": {
+		"JSON": {
+			"language_servers": ["biome", "..."],
+			"formatter": [
+				{ "language_server": { "name": "biome" } },
+				{ "code_action": "source.fixAll.biome" },
+			],
+		},
+
+		"JavaScript": {
+			"language_servers": ["biome", "..."],
+			"formatter": [
+				{ "language_server": { "name": "biome" } },
+				{ "code_action": "source.fixAll.biome" },
+				{ "code_action": "source.organizeImports.biome" },
+				{ "code_action": "source.removeUnusedImports" },
+			],
+		},
+
+		"TypeScript": {
+			"language_servers": ["biome", "..."],
+			"formatter": [
+				{ "language_server": { "name": "biome" } },
+				{ "code_action": "source.fixAll.biome" },
+				{ "code_action": "source.organizeImports.biome" },
+				{ "code_action": "source.removeUnusedImports" },
+			],
+		},
+	},
+}

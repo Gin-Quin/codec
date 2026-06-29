@@ -518,24 +518,25 @@ readVarUint8Array(decoder);
 
 Codec is built to be fast. A series of optimizations make it the current fastest serializer and deserializer, even faster than JSON for all cases tested.
 
-Results for encoding and decoding speed for a medium JSON object:
+Average speed for encoding and decoding of various serializers:
 
 | Serializer                | Bytes | Encode us | Decode us | Round trip us |
 | ------------------------- | ----: | --------: | --------: | ------------: |
-| `codec`                   |   803 |      0.83 |      1.12 |          1.95 |
-| `json`                    |  1082 |      0.83 |      1.36 |          2.16 |
-| `avsc`                    |   806 |      1.09 |      3.17 |          4.37 |
-| `msgpackr`                |   949 |      1.26 |      3.39 |          4.65 |
-| `v8`                      |  1266 |      2.49 |      2.47 |          5.00 |
-| `@msgpack/msgpack`        |   943 |      1.88 |      3.51 |          5.36 |
-| `cbor-x`                  |   957 |      1.26 |      4.37 |          5.63 |
-| `msgpackr-records`        |   955 |      1.74 |      4.13 |          5.84 |
-| `bson`                    |  1127 |      2.99 |      7.36 |         10.47 |
-| `bunker-schema`           |   978 |      5.85 |      9.02 |         14.92 |
-| `protobufjs`              |  1369 |      7.05 |      8.15 |         15.08 |
-| `bunker`                  |   978 |      6.93 |      8.74 |         15.49 |
-| `flatbuffers-flexbuffers` |  1134 |     21.30 |      9.66 |         30.35 |
-| `@bufbuild/protobuf`      |  1369 |     32.66 |     32.75 |         65.71 |
+| `codec`                   | 10414 |      19.3 |      21.1 |          40.9 |
+| `msgpackr-records`        | 10724 |      28.3 |      37.8 |          66.3 |
+| `avsc`                    | 10616 |      32.2 |      36.3 |          68.0 |
+| `json`                    | 21934 |      24.2 |      44.4 |          68.7 |
+| `v8`                      | 24052 |      54.1 |      32.7 |          87.1 |
+| `msgpackr`                | 16788 |      35.4 |      67.6 |         103.0 |
+| `cbor-x`                  | 17139 |      31.5 |      70.2 |         105.9 |
+| `@msgpack/msgpack`        | 16475 |      56.6 |     103.2 |         160.2 |
+| `bunker`                  |  8156 |     148.0 |      56.7 |         204.5 |
+| `bson`                    | 27199 |      88.6 |     147.1 |         234.8 |
+| `flatbuffers-flexbuffers` | 11893 |     232.6 |     201.6 |         430.3 |
+| `protobufjs`              | 33671 |     225.6 |     220.9 |         447.6 |
+| `@bufbuild/protobuf`      | 33671 |    1098.7 |    1156.0 |        2251.2 |
+
+The full results are available here: [BENCHMARKS.md](./BENCHMARKS.md).
 
 The fast path comes from a few deliberate implementation choices:
 
@@ -551,8 +552,11 @@ Run with:
 ```sh
 bun run benchmark # run the benchmarks and show the results
 bun run benchmark:save # run the benchmarks and save the results in a file
-bun benchmarks.html # show the last saved results in an html table
+bun run benchmark:generate-md # generate the markdown tables from the benchmark results
+bun run benchmark:view # open an html table to view the benchmark
 ```
+
+Don't hesitate to run the benchmarks on your machine to compare the results.
 
 The default output is a JSON report and the same report is saved to
 `benchmarks/results.json`.
@@ -584,7 +588,6 @@ Available serializers:
 - `codec`
 - `json`
 - `bunker`
-- `bunker-schema`
 - `msgpackr`
 - `msgpackr-records`
 - `@msgpack/msgpack`
@@ -597,7 +600,3 @@ Available serializers:
 - `bson`
 
 View saved results from the repository root:
-
-```sh
-bun benchmarks.html
-```

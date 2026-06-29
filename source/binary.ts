@@ -34,11 +34,7 @@ export class Decoder {
 
 	constructor(uint8Array: Uint8Array, pos = 0) {
 		this.arr = uint8Array;
-		this.view = new DataView(
-			uint8Array.buffer,
-			uint8Array.byteOffset,
-			uint8Array.byteLength,
-		);
+		this.view = new DataView(uint8Array.buffer, uint8Array.byteOffset, uint8Array.byteLength);
 		this.pos = pos;
 	}
 }

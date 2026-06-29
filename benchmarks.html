@@ -18,43 +18,106 @@
 			}
 
 			body {
-				margin: 24px;
+				background: #f8fafc;
+				color: #0f172a;
+				margin: 0;
+				padding: 32px;
 			}
 
 			header {
-				margin-bottom: 18px;
+				margin: 0 auto 28px;
+				max-width: 1120px;
 			}
 
 			h1 {
-				font-size: 22px;
-				font-weight: 650;
-				margin: 0 0 6px;
+				font-size: 30px;
+				font-weight: 700;
+				letter-spacing: 0;
+				line-height: 36px;
+				margin: 0 0 8px;
 			}
 
 			p {
-				color: color-mix(in srgb, CanvasText 70%, Canvas);
+				color: #475569;
 				margin: 0;
+			}
+
+			.intro {
+				max-width: 680px;
+			}
+
+			#summary {
+				color: oklch(70.4% 0.04 256.788);
+				font-size: 12px;
+				line-height: 16px;
+				margin-block: 10px;
+			}
+
+			main {
+				display: grid;
+				gap: 24px;
+				margin: 0 auto;
+				max-width: 1120px;
+			}
+
+			section {
+				background: #ffffff;
+				border: 1px solid #e2e8f0;
+				border-radius: 8px;
+				box-shadow:
+					0 1px 2px rgb(15 23 42 / 0.06),
+					0 1px 3px rgb(15 23 42 / 0.1);
+				overflow: hidden;
+			}
+
+			.case-header {
+				border-bottom: 1px solid #e2e8f0;
+				padding: 20px 24px;
+			}
+
+			h2 {
+				font-size: 18px;
+				font-weight: 650;
+				letter-spacing: 0;
+				line-height: 28px;
+				margin: 0 0 4px;
+			}
+
+			.table-wrap {
+				overflow-x: auto;
 			}
 
 			table {
 				border-collapse: collapse;
+				color: #334155;
 				font-size: 13px;
 				width: 100%;
 			}
 
 			th,
 			td {
-				border-bottom: 1px solid color-mix(in srgb, CanvasText 14%, Canvas);
-				padding: 7px 9px;
+				border-bottom: 1px solid #e2e8f0;
+				padding: 12px 16px;
 				text-align: left;
 				white-space: nowrap;
 			}
 
 			th {
-				background: color-mix(in srgb, CanvasText 6%, Canvas);
-				font-weight: 650;
+				background: #f8fafc;
+				color: #64748b;
+				font-size: 12px;
+				font-weight: 600;
+				letter-spacing: 0.025em;
 				position: sticky;
 				top: 0;
+			}
+
+			tbody tr:last-child td {
+				border-bottom: 0;
+			}
+
+			tbody tr:hover {
+				background: #f8fafc;
 			}
 
 			td.number,
@@ -62,95 +125,152 @@
 				text-align: right;
 			}
 
-			tr.best {
-				background: color-mix(in srgb, #24a148 12%, Canvas);
+			.serializer {
+				color: #0f172a;
+				font-weight: 600;
 			}
 
-			.status {
+			.serializer-cell {
+				align-items: center;
+				display: inline-flex;
+				gap: 8px;
+			}
+
+			.status-dot {
+				background: oklch(57.7% 0.245 27.325);
 				border-radius: 999px;
 				display: inline-block;
-				font-size: 12px;
-				padding: 2px 7px;
+				flex: 0 0 auto;
+				height: 6px;
+				width: 6px;
 			}
 
-			.ok {
-				background: color-mix(in srgb, #24a148 16%, Canvas);
+			.status-dot.ok {
+				background: oklch(62.7% 0.194 149.214);
 			}
 
-			.skipped,
-			.failed {
-				background: color-mix(in srgb, #f1c21b 20%, Canvas);
+			.ranked-cell {
+				color: #0f172a;
+				font-weight: 700;
+			}
+
+			@media (prefers-color-scheme: dark) {
+				body {
+					background: #020617;
+					color: #f8fafc;
+				}
+
+				p,
+				table {
+					color: #cbd5e1;
+				}
+
+				section {
+					background: #0f172a;
+					border-color: #334155;
+					box-shadow: none;
+				}
+
+				.case-header,
+				th,
+				td {
+					border-color: #334155;
+				}
+
+				th,
+				tbody tr:hover {
+					background: #1e293b;
+				}
+
+				th {
+					color: #94a3b8;
+				}
+
+				.serializer {
+					color: #f8fafc;
+				}
+
+				.ranked-cell {
+					color: #f8fafc;
+				}
+			}
+
+			@media (max-width: 720px) {
+				body {
+					padding: 20px;
+				}
+
+				h1 {
+					font-size: 24px;
+					line-height: 32px;
+				}
 			}
 		</style>
 	</head>
 	<body>
 		<img id="benchmark-results" src="./benchmarks/results.json" alt="" hidden />
 		<header>
-			<h1>codec benchmarks</h1>
+			<h1>Codec Benchmarks</h1>
 			<p id="summary">Loading benchmarks/results.json...</p>
+			<p class="intro">
+				Each serializer is tested on the same case payloads over repeated encode
+				and decode runs, using median timings from the saved benchmark report.
+			</p>
 		</header>
-		<table>
-			<thead>
-				<tr>
-					<th>Case</th>
-					<th>Serializer</th>
-					<th>Format</th>
-					<th class="number">Bytes</th>
-					<th class="number">Size vs JSON</th>
-					<th class="number">Encode us</th>
-					<th class="number">Decode us</th>
-					<th class="number">Round trip us</th>
-					<th class="number">Round trip vs JSON</th>
-					<th>Status</th>
-				</tr>
-			</thead>
-			<tbody id="rows"></tbody>
-		</table>
+		<main id="cases"></main>
 		<script type="module">
-			const rows = document.querySelector("#rows");
+			const cases = document.querySelector("#cases");
 			const summary = document.querySelector("#summary");
 			const resultsUrl = document.querySelector("#benchmark-results").src;
 			const response = await fetch(resultsUrl, { cache: "no-store" });
 			const report = await response.json();
-			const tableRows = flattenReport(report);
+			const benchmarkCases = report.cases.map(flattenCase);
+			const averageCase = buildAverageCase(benchmarkCases);
+			const rowCount = benchmarkCases.reduce(
+				(total, benchmarkCase) => total + benchmarkCase.rows.length,
+				0,
+			);
 
-			rows.replaceChildren(...tableRows.map(renderRow));
-			summary.textContent = `${tableRows.length} rows from ${report.cases.length} cases, generated ${new Date(
+			cases.replaceChildren(
+				renderCase(averageCase),
+				...benchmarkCases.map(renderCase),
+			);
+			summary.textContent = `${rowCount} rows from ${report.cases.length} cases, generated ${new Date(
 				report.generatedAt,
 			).toLocaleString()}`;
 
-			function flattenReport(report) {
-				return report.cases.flatMap((benchmarkCase) => {
-					const okResults = benchmarkCase.results.filter(
-						(result) => result.status === "ok",
-					);
-					const jsonResult = okResults.find((result) => result.name === "json");
-					const bestRoundTrip = Math.min(
-						...okResults.map((result) => result.roundTrip.medianMs),
-					);
+			function flattenCase(benchmarkCase) {
+				const okResults = benchmarkCase.results.filter(
+					(result) => result.status === "ok",
+				);
+				const jsonResult = okResults.find((result) => result.name === "json");
+				const rows = benchmarkCase.results.map((result) => ({
+					bytes: result.bytes,
+					decodeUs: result.decode && result.decode.medianMs * 1000,
+					encodeUs: result.encode && result.encode.medianMs * 1000,
+					format: result.format,
+					roundTripUs: result.roundTrip && result.roundTrip.medianMs * 1000,
+					serializer: result.name,
+					sizeVsJson:
+						result.bytes && jsonResult
+							? result.bytes / jsonResult.bytes
+							: undefined,
+					status: result.status,
+					statusText: result.error || result.reason || result.status,
+					vsJson:
+						result.roundTrip && jsonResult
+							? result.roundTrip.medianMs / jsonResult.roundTrip.medianMs
+							: undefined,
+				}));
+				const medalsBySerializer = buildMetricMedals(rows);
 
-					return benchmarkCase.results
-						.map((result) => ({
-							bytes: result.bytes,
-							caseName: benchmarkCase.name,
-							decodeUs: result.decode && result.decode.medianMs * 1000,
-							encodeUs: result.encode && result.encode.medianMs * 1000,
-							format: result.format,
-							isBest:
-								result.status === "ok" &&
-								result.roundTrip.medianMs === bestRoundTrip,
-							roundTripUs: result.roundTrip && result.roundTrip.medianMs * 1000,
-							serializer: result.name,
-							sizeVsJson:
-								result.bytes && jsonResult
-									? result.bytes / jsonResult.bytes
-									: undefined,
-							status: result.status,
-							statusText: result.error || result.reason || result.status,
-							vsJson:
-								result.roundTrip && jsonResult
-									? result.roundTrip.medianMs / jsonResult.roundTrip.medianMs
-									: undefined,
+				return {
+					description: benchmarkCase.description,
+					name: benchmarkCase.name,
+					rows: rows
+						.map((row) => ({
+							...row,
+							medals: medalsBySerializer.get(row.serializer) || {},
 						}))
 						.sort((left, right) => {
 							if (left.status !== "ok" && right.status === "ok") return 1;
@@ -158,27 +278,201 @@
 							return (
 								(left.roundTripUs ?? Infinity) - (right.roundTripUs ?? Infinity)
 							);
-						});
+						}),
+				};
+			}
+
+			function buildAverageCase(benchmarkCases) {
+				const rowsBySerializer = new Map();
+
+				for (const benchmarkCase of benchmarkCases) {
+					for (const row of benchmarkCase.rows) {
+						const serializerRows = rowsBySerializer.get(row.serializer) || [];
+						serializerRows.push(row);
+						rowsBySerializer.set(row.serializer, serializerRows);
+					}
+				}
+
+				const rows = Array.from(rowsBySerializer, ([serializer, rows]) => {
+					const formatValues = new Set(rows.map((row) => row.format));
+					const failedRows = rows.filter((row) => row.status !== "ok");
+
+					return {
+						bytes: averageValue(rows, "bytes"),
+						decodeUs: averageValue(rows, "decodeUs"),
+						encodeUs: averageValue(rows, "encodeUs"),
+						format:
+							formatValues.size === 1
+								? rows[0].format
+								: Array.from(formatValues).join(", "),
+						roundTripUs: averageValue(rows, "roundTripUs"),
+						serializer,
+						status: failedRows.length === 0 ? "ok" : "failed",
+						statusText:
+							failedRows.length === 0
+								? `Averaged across ${rows.length} cases.`
+								: `${failedRows.length} of ${rows.length} cases did not complete.`,
+					};
 				});
+				const jsonRow = rows.find((row) => row.serializer === "json");
+				const normalizedRows = rows.map((row) => ({
+					...row,
+					sizeVsJson: divide(row.bytes, jsonRow?.bytes),
+					vsJson: divide(row.roundTripUs, jsonRow?.roundTripUs),
+				}));
+				const medalsBySerializer = buildMetricMedals(normalizedRows);
+
+				return {
+					description: "Mean values across all benchmark cases.",
+					name: "Average results",
+					rows: normalizedRows
+						.map((row) => ({
+							...row,
+							medals: medalsBySerializer.get(row.serializer) || {},
+						}))
+						.sort((left, right) => {
+							if (left.status !== "ok" && right.status === "ok") return 1;
+							if (left.status === "ok" && right.status !== "ok") return -1;
+							return (
+								(left.roundTripUs ?? Infinity) - (right.roundTripUs ?? Infinity)
+							);
+						}),
+				};
+			}
+
+			function averageValue(rows, key) {
+				const values = rows
+					.map((row) => row[key])
+					.filter((value) => value !== undefined);
+
+				if (values.length === 0) return undefined;
+				return (
+					values.reduce((total, value) => total + value, 0) / values.length
+				);
+			}
+
+			function divide(value, divisor) {
+				if (value === undefined || divisor === undefined) return undefined;
+				return value / divisor;
+			}
+
+			function buildMetricMedals(rows) {
+				const metrics = [
+					"bytes",
+					"sizeVsJson",
+					"encodeUs",
+					"decodeUs",
+					"roundTripUs",
+					"vsJson",
+				];
+				const medalsBySerializer = new Map();
+
+				for (const key of metrics) {
+					const rankedRows = rows
+						.filter((row) => row.status === "ok" && row[key] !== undefined)
+						.sort((left, right) => left[key] - right[key])
+						.slice(0, 3);
+
+					rankedRows.forEach((row, index) => {
+						const medals = medalsBySerializer.get(row.serializer) || {};
+						medals[key] = ["🥇", "🥈", "🥉"][index];
+						medalsBySerializer.set(row.serializer, medals);
+					});
+				}
+
+				return medalsBySerializer;
+			}
+
+			function renderCase(benchmarkCase) {
+				const section = document.createElement("section");
+				const header = document.createElement("div");
+				header.className = "case-header";
+
+				const title = document.createElement("h2");
+				title.textContent = benchmarkCase.name;
+
+				const description = document.createElement("p");
+				description.textContent = benchmarkCase.description;
+
+				const tableWrap = document.createElement("div");
+				tableWrap.className = "table-wrap";
+				const table = document.createElement("table");
+				table.append(renderHead(), renderBody(benchmarkCase.rows));
+				tableWrap.append(table);
+
+				header.append(title, description);
+				section.append(header, tableWrap);
+				return section;
+			}
+
+			function renderHead() {
+				const thead = document.createElement("thead");
+				const tr = document.createElement("tr");
+				appendHeader(tr, "Serializer");
+				appendHeader(tr, "Format");
+				appendHeader(tr, "Bytes", "number");
+				appendHeader(tr, "Size vs JSON", "number");
+				appendHeader(tr, "Encode µs", "number");
+				appendHeader(tr, "Decode µs", "number");
+				appendHeader(tr, "Round trip µs", "number");
+				appendHeader(tr, "Round trip vs JSON", "number");
+				thead.append(tr);
+				return thead;
+			}
+
+			function renderBody(caseRows) {
+				const tbody = document.createElement("tbody");
+				tbody.replaceChildren(...caseRows.map(renderRow));
+				return tbody;
 			}
 
 			function renderRow(row) {
 				const tr = document.createElement("tr");
-				if (row.isBest) tr.className = "best";
-				appendCell(tr, row.caseName);
-				appendCell(tr, row.serializer);
+				appendSerializerCell(tr, row);
 				appendCell(tr, row.format);
-				appendCell(tr, formatInteger(row.bytes), "number");
-				appendCell(tr, formatRatio(row.sizeVsJson), "number");
-				appendCell(tr, formatNumber(row.encodeUs), "number");
-				appendCell(tr, formatNumber(row.decodeUs), "number");
-				appendCell(tr, formatNumber(row.roundTripUs), "number");
-				appendCell(tr, formatRatio(row.vsJson), "number");
-				const status = document.createElement("td");
-				status.title = row.statusText;
-				status.innerHTML = `<span class="status ${row.status}">${row.status}</span>`;
-				tr.append(status);
+				appendMetricCell(tr, row, "bytes", formatInteger);
+				appendMetricCell(tr, row, "sizeVsJson", formatRatio);
+				appendMetricCell(tr, row, "encodeUs", formatNumber);
+				appendMetricCell(tr, row, "decodeUs", formatNumber);
+				appendMetricCell(tr, row, "roundTripUs", formatNumber);
+				appendMetricCell(tr, row, "vsJson", formatRatio);
 				return tr;
+			}
+
+			function appendSerializerCell(row, result) {
+				const cell = document.createElement("td");
+				const wrapper = document.createElement("span");
+				const dot = document.createElement("span");
+				const name = document.createElement("span");
+
+				cell.className = "serializer";
+				cell.title = result.statusText;
+				wrapper.className = "serializer-cell";
+				dot.className = `status-dot ${result.status === "ok" ? "ok" : "error"}`;
+				name.textContent = `${result.serializer}${
+					result.medals.roundTripUs ? ` ${result.medals.roundTripUs}` : ""
+				}`;
+				wrapper.append(dot, name);
+				cell.append(wrapper);
+				row.append(cell);
+			}
+
+			function appendMetricCell(row, result, key, formatter) {
+				const cell = document.createElement("td");
+				const medal = result.medals[key];
+				cell.className = medal ? "number ranked-cell" : "number";
+				cell.textContent =
+					result[key] === undefined
+						? ""
+						: `${medal ? `${medal} ` : ""}${formatter(result[key])}`;
+				row.append(cell);
+			}
+
+			function appendHeader(row, value, className) {
+				const cell = document.createElement("th");
+				if (className) cell.className = className;
+				cell.textContent = value;
+				row.append(cell);
 			}
 
 			function appendCell(row, value, className) {

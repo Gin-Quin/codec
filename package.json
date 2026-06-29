@@ -7,11 +7,14 @@
 		"./*": "./source/*.ts"
 	},
 	"scripts": {
+		"check": "bun biome check",
 		"benchmark": "bun ./benchmarks/index.ts",
 		"benchmark:save": "bun ./benchmarks/index.ts > ./benchmarks/benchmark-results.json",
+		"benchmark:generate-md": "bun ./benchmarks/generate-markdown.ts",
 		"benchmark:view": "bun ./benchmarks.html"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^2.5.1",
 		"@types/bun": "latest"
 	},
 	"peerDependencies": {

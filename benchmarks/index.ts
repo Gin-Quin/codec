@@ -1,34 +1,29 @@
-import { fromBinary, fromJson, toBinary, toJson } from "@bufbuild/protobuf";
-import { StructSchema } from "@bufbuild/protobuf/wkt";
-import {
-	array as bunkerArray,
-	boolean as bunkerBoolean,
-	bunker,
-	debunker,
-	integer as bunkerInteger,
-	number as bunkerNumber,
-	object as bunkerObject,
-	positiveInteger as bunkerPositiveInteger,
-	type Schema as BunkerSchema,
-	string as bunkerString,
-} from "@digitak/bunker";
-import { decode as messagePackDecode, encode as messagePackEncode } from "@msgpack/msgpack";
-import avro from "avsc";
-import { decode as cborDecode, encode as cborEncode } from "cbor-x";
-import { encode as flexEncode, toObject as flexDecode } from "flatbuffers/mjs/flexbuffers.js";
-import { Packr, pack as msgpackrEncode, unpack as msgpackrDecode } from "msgpackr";
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { deserialize as v8Deserialize, serialize as v8Serialize } from "node:v8";
-import protobuf from "protobufjs";
+import { fromBinary, fromJson, toBinary, toJson } from "@bufbuild/protobuf";
+import { StructSchema } from "@bufbuild/protobuf/wkt";
 import {
-	array,
-	createCodec,
-	map,
-	object,
-	type Schema,
-} from "../source/index.ts";
+	type Schema as BunkerSchema,
+	bunker,
+	array as bunkerArray,
+	boolean as bunkerBoolean,
+	integer as bunkerInteger,
+	number as bunkerNumber,
+	object as bunkerObject,
+	positiveInteger as bunkerPositiveInteger,
+	string as bunkerString,
+	debunker,
+} from "@digitak/bunker";
+import { decode as messagePackDecode, encode as messagePackEncode } from "@msgpack/msgpack";
+import avro from "avsc";
+import { decode as cborDecode, encode as cborEncode } from "cbor-x";
+import { toObject as flexDecode, encode as flexEncode } from "flatbuffers/mjs/flexbuffers.js";
+import { unpack as msgpackrDecode, pack as msgpackrEncode, Packr } from "msgpackr";
+import protobuf from "protobufjs";
+import { array, createCodec, map, object, type Schema } from "../source/index.ts";
+import { generateBenchmarkMarkdown } from "./generate-markdown.ts";
 
 type JsonPrimitive = boolean | number | string | null;
 type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
@@ -133,7 +128,9 @@ const RESULTS_PATH = join(dirname(fileURLToPath(import.meta.url)), "results.json
 const TEXT_ENCODER = new TextEncoder();
 let sink = 0;
 
-const protobufStructType = protobuf.parse(`
+const protobufStructType = protobuf
+	.parse(
+		`
 syntax = "proto3";
 package google.protobuf;
 
@@ -159,7 +156,9 @@ message ListValue {
 enum NullValue {
 	NULL_VALUE = 0;
 }
-`).root.lookupType("google.protobuf.Struct");
+`,
+	)
+	.root.lookupType("google.protobuf.Struct");
 
 const profileSchema = object({
 	id: "uint",
@@ -523,7 +522,8 @@ const cases: BenchmarkCase[] = [
 		},
 		bunkerSchema: bunkerCouponBatchSchema,
 		codecSchema: couponBatchSchema,
-		description: "A batch of compact, repeated payment-style records inspired by avsc's Coupon benchmark.",
+		description:
+			"A batch of compact, repeated payment-style records inspired by avsc's Coupon benchmark.",
 		iterations: 1_500,
 		name: "coupon-batch",
 		value: createCouponBatch(64),
@@ -633,7 +633,10 @@ const cases: BenchmarkCase[] = [
 												{ name: "id", type: "long" },
 												{ name: "tags", type: { type: "array", items: "int" } },
 												{ name: "type", type: "int" },
-												{ name: "geometry", type: { type: "array", items: "int" } },
+												{
+													name: "geometry",
+													type: { type: "array", items: "int" },
+												},
 											],
 										},
 									},
@@ -725,7 +728,8 @@ const cases: BenchmarkCase[] = [
 		},
 		bunkerSchema: bunkerSearchIndexSchema,
 		codecSchema: searchIndexSchema,
-		description: "A large object with a long string snapshot, arrays, and a large string-keyed index.",
+		description:
+			"A large object with a long string snapshot, arrays, and a large string-keyed index.",
 		iterations: 55,
 		name: "search-index",
 		value: createSearchIndex(48, 160),
@@ -747,6 +751,7 @@ const report = runBenchmarks(
 const reportJson = JSON.stringify(report, null, 2);
 
 writeFileSync(RESULTS_PATH, `${reportJson}\n`);
+generateBenchmarkMarkdown(report);
 
 if (cliOptions.tableMode) {
 	console.table(toTableRows(report));
@@ -878,18 +883,8 @@ async function createSerializers(): Promise<{
 		},
 		{
 			format: "Bunker",
-			mode: "document",
-			name: "bunker",
-			note: "Uses bunker(value), so Bunker discovers and embeds the schema on each encode.",
-			setup: () => ({
-				decode: (encoded) => debunker(encoded as Uint8Array),
-				encode: (value) => bunker(value),
-			}),
-		},
-		{
-			format: "Bunker",
 			mode: "schema",
-			name: "bunker-schema",
+			name: "bunker",
 			note: "Passes an explicit schema to bunker(value, schema), so Bunker does not discover the schema during encode.",
 			setup: (benchmarkCase) => ({
 				decode: (encoded) => debunker(encoded as Uint8Array),
@@ -955,7 +950,9 @@ async function createSerializers(): Promise<{
 			setup: () => ({
 				decode: (encoded) => protobufStructToJson(protobufStructType.decode(encoded as Uint8Array)),
 				encode: (value) =>
-					protobufStructType.encode(protobufStructType.create(jsonToProtobufStruct(value))).finish(),
+					protobufStructType
+						.encode(protobufStructType.create(jsonToProtobufStruct(value)))
+						.finish(),
 			}),
 		},
 		{
@@ -1263,7 +1260,9 @@ function stableStringify(value: unknown): string {
 		.join(",")}}`;
 }
 
-function jsonToProtobufStruct(value: JsonObject): { fields: Record<string, unknown> } {
+function jsonToProtobufStruct(value: JsonObject): {
+	fields: Record<string, unknown>;
+} {
 	const fields: Record<string, unknown> = {};
 	for (const [key, fieldValue] of Object.entries(value)) {
 		fields[key] = jsonToProtobufValue(fieldValue);
@@ -1287,11 +1286,18 @@ function jsonToProtobufValue(value: JsonValue): Record<string, unknown> {
 			return { structValue: jsonToProtobufStruct(value) };
 		case "string":
 			return { stringValue: value };
+		case "undefined":
+		case "bigint":
+		case "function":
+		case "symbol":
+			throw new Error(`Type ${typeof value} of value ${value} is not supported.`);
 	}
 }
 
 function protobufStructToJson(value: unknown): JsonObject {
-	const structValue = toProtobufJsonObject(value) as { fields?: Record<string, unknown> };
+	const structValue = toProtobufJsonObject(value) as {
+		fields?: Record<string, unknown>;
+	};
 	const result: JsonObject = {};
 	for (const [key, fieldValue] of Object.entries(structValue.fields ?? {})) {
 		result[key] = protobufValueToJson(fieldValue);
@@ -1440,7 +1446,9 @@ function createTaskBoard(taskCount: number): JsonObject {
 		revision: 148,
 		tasks,
 		title: "Product Roadmap",
-		totals: Object.fromEntries(columns.map((column) => [column, tasks.filter((task) => task.columnId === column).length])),
+		totals: Object.fromEntries(
+			columns.map((column) => [column, tasks.filter((task) => task.columnId === column).length]),
+		),
 	};
 }
 
@@ -1535,9 +1543,7 @@ function createBunkerObjectFromKeys(
 	const fields: Record<string, BunkerSchema> = {};
 	for (let index = 0; index < count; index++) {
 		const key =
-			padStart > 0
-				? `${prefix}-${index.toString().padStart(padStart, "0")}`
-				: `${prefix}-${index}`;
+			padStart > 0 ? `${prefix}-${index.toString().padStart(padStart, "0")}` : `${prefix}-${index}`;
 		fields[key] = schema;
 	}
 	return bunkerObject(fields);
