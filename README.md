@@ -523,18 +523,27 @@ readVarUint8Array(decoder);
 
 ## Benchmarks
 
-Benchmarks package to compare codec with other popular serializers and deserializers.
+Codec is built to be fast. A series of optimizations make it the current fastest serializer and deserializer, even faster than JSON for all cases tested.
 
-Example `profile` benchmark run on Bun:
+Results for encoding and decoding speed for a medium JSON object:
 
-| Serializer | Bytes | Encode us | Decode us | Round trip us |
-| --- | ---: | ---: | ---: | ---: |
-| `codec` | 803 | 0.81 | 1.07 | 1.88 |
-| `json` | 1082 | 0.77 | 1.28 | 2.07 |
-| `avsc` | 806 | 1.16 | 2.82 | 4.27 |
-| `msgpackr` | 949 | 1.23 | 3.32 | 4.55 |
-| `bunker-schema` | 978 | 5.70 | 8.57 | 14.33 |
-| `bunker` | 978 | 6.28 | 8.78 | 15.02 |
+| Serializer                | Bytes | Encode us | Decode us | Round trip us |
+| ------------------------- | ----: | --------: | --------: | ------------: |
+| `codec`                   |   803 |      0.83 |      1.12 |          1.95 |
+| `codec-view`              |   803 |      1.15 |      0.96 |          2.09 |
+| `json`                    |  1082 |      0.83 |      1.36 |          2.16 |
+| `avsc`                    |   806 |      1.09 |      3.17 |          4.37 |
+| `msgpackr`                |   949 |      1.26 |      3.39 |          4.65 |
+| `v8`                      |  1266 |      2.49 |      2.47 |          5.00 |
+| `@msgpack/msgpack`        |   943 |      1.88 |      3.51 |          5.36 |
+| `cbor-x`                  |   957 |      1.26 |      4.37 |          5.63 |
+| `msgpackr-records`        |   955 |      1.74 |      4.13 |          5.84 |
+| `bson`                    |  1127 |      2.99 |      7.36 |         10.47 |
+| `bunker-schema`           |   978 |      5.85 |      9.02 |         14.92 |
+| `protobufjs`              |  1369 |      7.05 |      8.15 |         15.08 |
+| `bunker`                  |   978 |      6.93 |      8.74 |         15.49 |
+| `flatbuffers-flexbuffers` |  1134 |     21.30 |      9.66 |         30.35 |
+| `@bufbuild/protobuf`      |  1369 |     32.66 |     32.75 |         65.71 |
 
 The fast path comes from a few deliberate implementation choices:
 
@@ -586,6 +595,7 @@ Available serializers:
 - `bunker`
 - `bunker-schema`
 - `msgpackr`
+- `msgpackr-records`
 - `@msgpack/msgpack`
 - `cbor-x`
 - `avsc`

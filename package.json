@@ -8,7 +8,8 @@
 	},
 	"scripts": {
 		"benchmark": "bun ./benchmarks/index.ts",
-		"benchmark:save": "bun ./benchmarks/index.ts > ./benchmarks/benchmark-results.json"
+		"benchmark:save": "bun ./benchmarks/index.ts > ./benchmarks/benchmark-results.json",
+		"benchmark:view": "bun ./benchmarks.html"
 	},
 	"devDependencies": {
 		"@types/bun": "latest"

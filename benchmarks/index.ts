@@ -16,7 +16,7 @@ import { decode as messagePackDecode, encode as messagePackEncode } from "@msgpa
 import avro from "avsc";
 import { decode as cborDecode, encode as cborEncode } from "cbor-x";
 import { encode as flexEncode, toObject as flexDecode } from "flatbuffers/mjs/flexbuffers.js";
-import { pack as msgpackrEncode, unpack as msgpackrDecode } from "msgpackr";
+import { Packr, pack as msgpackrEncode, unpack as msgpackrDecode } from "msgpackr";
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -281,6 +281,48 @@ const bunkerTaskSchema = bunkerObject({
 	}),
 });
 
+const couponSchema = object({
+	id: "string",
+	object: "string",
+	livemode: "boolean",
+	created: "uint",
+	duration: "string",
+	metadata: map("string"),
+	timesRedeemed: "uint",
+	valid: "boolean",
+	amountOff: "uint",
+	currency: "string",
+	durationInMonths: "uint",
+	maxRedemptions: "uint",
+	percentOff: "uint",
+	redeemBy: "uint",
+});
+
+const couponBatchSchema = object({
+	coupons: array(couponSchema),
+});
+
+const bunkerCouponSchema = bunkerObject({
+	id: bunkerString,
+	object: bunkerString,
+	livemode: bunkerBoolean,
+	created: bunkerPositiveInteger,
+	duration: bunkerString,
+	metadata: createBunkerObjectFromKeys("meta", 4, bunkerString),
+	timesRedeemed: bunkerPositiveInteger,
+	valid: bunkerBoolean,
+	amountOff: bunkerPositiveInteger,
+	currency: bunkerString,
+	durationInMonths: bunkerPositiveInteger,
+	maxRedemptions: bunkerPositiveInteger,
+	percentOff: bunkerPositiveInteger,
+	redeemBy: bunkerPositiveInteger,
+});
+
+const bunkerCouponBatchSchema = bunkerObject({
+	coupons: bunkerArray(bunkerCouponSchema),
+});
+
 const searchIndexSchema = object({
 	documentId: "string",
 	title: "string",
@@ -343,6 +385,54 @@ const bunkerSearchIndexSchema = bunkerObject({
 	index: createBunkerObjectFromKeys("key", 160, bunkerSearchIndexEntrySchema, 3),
 });
 
+const vectorTileSchema = object({
+	layers: array(
+		object({
+			version: "uint",
+			name: "string",
+			features: array(
+				object({
+					id: "uint",
+					tags: array("uint"),
+					type: "uint",
+					geometry: array("uint"),
+				}),
+			),
+			keys: array("string"),
+			values: array(
+				object({
+					value: "uint",
+				}),
+			),
+			extent: "uint",
+		}),
+	),
+});
+
+const bunkerVectorTileSchema = bunkerObject({
+	layers: bunkerArray(
+		bunkerObject({
+			version: bunkerPositiveInteger,
+			name: bunkerString,
+			features: bunkerArray(
+				bunkerObject({
+					id: bunkerPositiveInteger,
+					tags: bunkerArray(bunkerPositiveInteger),
+					type: bunkerPositiveInteger,
+					geometry: bunkerArray(bunkerPositiveInteger),
+				}),
+			),
+			keys: bunkerArray(bunkerString),
+			values: bunkerArray(
+				bunkerObject({
+					value: bunkerPositiveInteger,
+				}),
+			),
+			extent: bunkerPositiveInteger,
+		}),
+	),
+});
+
 const cases: BenchmarkCase[] = [
 	{
 		avroSchema: {
@@ -383,6 +473,61 @@ const cases: BenchmarkCase[] = [
 		name: "profile",
 		value: createProfile(),
 		warmupIterations: 500,
+	},
+	{
+		avroSchema: {
+			type: "record",
+			name: "CouponBatchPayload",
+			fields: [
+				{
+					name: "coupons",
+					type: {
+						type: "array",
+						items: {
+							type: "record",
+							name: "Coupon",
+							fields: [
+								{ name: "id", type: "string" },
+								{ name: "object", type: "string" },
+								{ name: "livemode", type: "boolean" },
+								{ name: "created", type: "long" },
+								{
+									name: "duration",
+									type: {
+										type: "enum",
+										name: "Duration",
+										symbols: ["FOREVER", "ONCE", "REPEATING"],
+									},
+								},
+								{ name: "metadata", type: { type: "map", values: "string" } },
+								{ name: "timesRedeemed", type: "int" },
+								{ name: "valid", type: "boolean" },
+								{ name: "amountOff", type: "int" },
+								{
+									name: "currency",
+									type: {
+										type: "enum",
+										name: "Currency",
+										symbols: ["DOLLAR", "EURO"],
+									},
+								},
+								{ name: "durationInMonths", type: "int" },
+								{ name: "maxRedemptions", type: "int" },
+								{ name: "percentOff", type: "int" },
+								{ name: "redeemBy", type: "int" },
+							],
+						},
+					},
+				},
+			],
+		},
+		bunkerSchema: bunkerCouponBatchSchema,
+		codecSchema: couponBatchSchema,
+		description: "A batch of compact, repeated payment-style records inspired by avsc's Coupon benchmark.",
+		iterations: 1_500,
+		name: "coupon-batch",
+		value: createCouponBatch(64),
+		warmupIterations: 100,
 	},
 	{
 		avroSchema: {
@@ -461,6 +606,64 @@ const cases: BenchmarkCase[] = [
 		name: "task-board",
 		value: createTaskBoard(120),
 		warmupIterations: 30,
+	},
+	{
+		avroSchema: {
+			type: "record",
+			name: "VectorTilePayload",
+			fields: [
+				{
+					name: "layers",
+					type: {
+						type: "array",
+						items: {
+							type: "record",
+							name: "TileLayer",
+							fields: [
+								{ name: "version", type: "int" },
+								{ name: "name", type: "string" },
+								{
+									name: "features",
+									type: {
+										type: "array",
+										items: {
+											type: "record",
+											name: "TileFeature",
+											fields: [
+												{ name: "id", type: "long" },
+												{ name: "tags", type: { type: "array", items: "int" } },
+												{ name: "type", type: "int" },
+												{ name: "geometry", type: { type: "array", items: "int" } },
+											],
+										},
+									},
+								},
+								{ name: "keys", type: { type: "array", items: "string" } },
+								{
+									name: "values",
+									type: {
+										type: "array",
+										items: {
+											type: "record",
+											name: "TileValue",
+											fields: [{ name: "value", type: "int" }],
+										},
+									},
+								},
+								{ name: "extent", type: "int" },
+							],
+						},
+					},
+				},
+			],
+		},
+		bunkerSchema: bunkerVectorTileSchema,
+		codecSchema: vectorTileSchema,
+		description: "A vector-tile style payload with nested arrays and many small unsigned integers.",
+		iterations: 450,
+		name: "vector-tile",
+		value: createVectorTile(3, 45),
+		warmupIterations: 35,
 	},
 	{
 		avroSchema: {
@@ -714,6 +917,19 @@ async function createSerializers(): Promise<{
 				decode: (encoded) => msgpackrDecode(encoded as Uint8Array),
 				encode: (value) => msgpackrEncode(value),
 			}),
+		},
+		{
+			format: "MessagePack",
+			mode: "document",
+			name: "msgpackr-records",
+			note: "Uses msgpackr Packr with shared record structures enabled.",
+			setup: () => {
+				const packr = new Packr({ useRecords: true });
+				return {
+					decode: (encoded) => packr.unpack(encoded as Uint8Array),
+					encode: (value) => packr.pack(value),
+				};
+			},
 		},
 		{
 			format: "MessagePack",
@@ -1175,6 +1391,35 @@ function createProfile(): JsonObject {
 	};
 }
 
+function createCouponBatch(count: number): JsonObject {
+	const durations = ["FOREVER", "ONCE", "REPEATING"];
+	const currencies = ["DOLLAR", "EURO"];
+
+	return {
+		coupons: Array.from({ length: count }, (_, index) => ({
+			amountOff: index % 3 === 0 ? 500 + index * 25 : 0,
+			created: 1_704_067_200 + index * 3600,
+			currency: currencies[index % currencies.length]!,
+			duration: durations[index % durations.length]!,
+			durationInMonths: index % 3 === 2 ? 3 + (index % 9) : 0,
+			id: `coupon_${index.toString().padStart(4, "0")}`,
+			livemode: index % 5 !== 0,
+			maxRedemptions: 100 + index * 3,
+			metadata: {
+				"meta-0": `campaign-${index % 8}`,
+				"meta-1": `segment-${index % 5}`,
+				"meta-2": `region-${index % 4}`,
+				"meta-3": `owner-${index % 6}`,
+			},
+			object: "coupon",
+			percentOff: index % 3 === 0 ? 0 : 5 + (index % 20),
+			redeemBy: 1_735_689_600 + index * 86_400,
+			timesRedeemed: index * 7,
+			valid: index % 11 !== 0,
+		})),
+	};
+}
+
 function createTaskBoard(taskCount: number): JsonObject {
 	const columns = ["todo", "doing", "review", "blocked", "done"];
 	const tasks = Array.from({ length: taskCount }, (_, index) => ({
@@ -1210,6 +1455,39 @@ function createTaskBoard(taskCount: number): JsonObject {
 		title: "Product Roadmap",
 		totals: Object.fromEntries(columns.map((column) => [column, tasks.filter((task) => task.columnId === column).length])),
 	};
+}
+
+function createVectorTile(layerCount: number, featuresPerLayer: number): JsonObject {
+	return {
+		layers: Array.from({ length: layerCount }, (_, layerIndex) => ({
+			extent: 4096,
+			features: Array.from({ length: featuresPerLayer }, (_, featureIndex) => ({
+				geometry: createGeometryPattern(layerIndex, featureIndex),
+				id: layerIndex * 10_000 + featureIndex + 1,
+				tags: [
+					featureIndex % 12,
+					(featureIndex * 3) % 17,
+					(featureIndex + layerIndex) % 9,
+					(featureIndex * 5) % 23,
+				],
+				type: (featureIndex % 3) + 1,
+			})),
+			keys: createStringList(`layer-${layerIndex}-key`, 12),
+			name: `layer-${layerIndex}`,
+			values: Array.from({ length: 18 }, (_, index) => ({
+				value: (layerIndex + 1) * 100 + index,
+			})),
+			version: 2,
+		})),
+	};
+}
+
+function createGeometryPattern(layerIndex: number, featureIndex: number): number[] {
+	const length = 18 + (featureIndex % 5) * 6;
+	return Array.from({ length }, (_, index) => {
+		const command = index % 3 === 0 ? 9 : 2;
+		return command + ((layerIndex * 31 + featureIndex * 17 + index * 7) % 256);
+	});
 }
 
 function createSearchIndex(sectionCount: number, entryCount: number): JsonObject {

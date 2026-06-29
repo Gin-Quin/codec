@@ -41,6 +41,7 @@ Available serializers:
 - `bunker`
 - `bunker-schema`
 - `msgpackr`
+- `msgpackr-records`
 - `@msgpack/msgpack`
 - `cbor-x`
 - `avsc`
