@@ -1,12 +1,13 @@
 # codec
 
-`codec` is a small binary serialization library for TypeScript values.
+`codec` is a small and simple binary serialization library for TypeScript.
 
-Define a schema once, compile it with `createCodec(schema)`, then use the
-resulting codec to encode and decode values. The schema is not interpreted on
-every value: it is compiled into very optimized, specialized reader and writer
-functions, so hot encode/decode paths avoid generic schema walking and stay
-fast.
+- ⚡ Super-fast encoding and decoding speed (see [benchmarks](#benchmarks)).
+- 🔀 Well-typed unions with discriminants.
+
+Define a schema once, compile it with `createCodec(schema)`, then use the resulting codec to encode and decode values.
+
+The schema is compiled into very optimized reader and writer functions.
 
 ## Minimal Examples
 
