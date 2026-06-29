@@ -1,5 +1,6 @@
 {
 	"name": "@gin-quin/codec",
+	"description": "Very fast and fully typed binary serializer with support for unions.",
 	"module": "source/index.ts",
 	"type": "module",
 	"private": true,

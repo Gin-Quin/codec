@@ -66,6 +66,7 @@ const compiledHelpers = {
 const compiledHelperNames = Object.keys(compiledHelpers);
 const compiledHelperDeclarations = `const {${compiledHelperNames.join(",")}} = helpers;`;
 
+/** Compiles a schema into a low-level writer function. */
 export function compileWriter(schema: Schema): WriteFunction {
 	const state: CompileState = { lazySchemas: [], nextId: 0, stringCaches: [] };
 	const body = emitWrite(schema, "value", "encoder", state);
@@ -76,6 +77,7 @@ export function compileWriter(schema: Schema): WriteFunction {
 	)(compiledHelpers, state.lazySchemas) as WriteFunction;
 }
 
+/** Compiles a schema into a low-level reader function. */
 export function compileReader(schema: Schema): ReadFunction {
 	const state: CompileState = { lazySchemas: [], nextId: 0, stringCaches: [] };
 	const result = emitRead(schema, "decoder", state);

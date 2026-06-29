@@ -33,6 +33,7 @@ import type {
 	UnionSchema,
 } from "./schema";
 
+/** Writes a value using a schema without precompiling a codec. */
 export function writeSchema(schema: Schema, value: any, encoder: Encoder): void {
 	if (typeof schema === "function") {
 		schema = schema();
@@ -173,6 +174,7 @@ function writeTuple(schema: TupleSchema<Schema[]>, value: any[], encoder: Encode
 	}
 }
 
+/** Reads a value using a schema without precompiling a codec. */
 export function readSchema(schema: Schema, decoder: Decoder): any {
 	if (typeof schema === "function") {
 		schema = schema();

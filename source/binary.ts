@@ -15,11 +15,16 @@ interface CachedString {
 	value: string;
 }
 
+/** Mutable byte writer used by low-level encoding helpers. */
 export class Encoder {
+	/** Backing byte buffer. */
 	buffer: Uint8Array<ArrayBuffer>;
+	/** DataView over the backing buffer for fixed-width writes. */
 	view: DataView<ArrayBuffer>;
+	/** Current write offset in bytes. */
 	pos: number;
 
+	/** Creates an encoder with an optional initial buffer size. */
 	constructor(initialSize = defaultBufferSize) {
 		this.buffer = new Uint8Array(initialSize);
 		this.view = new DataView(this.buffer.buffer);
@@ -27,11 +32,16 @@ export class Encoder {
 	}
 }
 
+/** Mutable byte reader used by low-level decoding helpers. */
 export class Decoder {
+	/** Bytes being decoded. */
 	arr: Uint8Array;
+	/** DataView over the decoded bytes for fixed-width reads. */
 	view: DataView<ArrayBufferLike>;
+	/** Current read offset in bytes. */
 	pos: number;
 
+	/** Creates a decoder for a byte array and optional starting offset. */
 	constructor(uint8Array: Uint8Array, pos = 0) {
 		this.arr = uint8Array;
 		this.view = new DataView(uint8Array.buffer, uint8Array.byteOffset, uint8Array.byteLength);
@@ -39,18 +49,22 @@ export class Decoder {
 	}
 }
 
+/** Creates an encoder for low-level writes. */
 export function createEncoder(initialSize?: number): Encoder {
 	return new Encoder(initialSize);
 }
 
+/** Creates a decoder for low-level reads. */
 export function createDecoder(uint8Array: Uint8Array): Decoder {
 	return new Decoder(uint8Array);
 }
 
+/** Copies the written portion of an encoder into an exact-sized `Uint8Array`. */
 export function toUint8Array(encoder: Encoder): Uint8Array<ArrayBuffer> {
 	return encoder.buffer.slice(0, encoder.pos);
 }
 
+/** Ensures an encoder has room for the next number of bytes. */
 export function ensureCapacity(encoder: Encoder, byteLength: number): void {
 	const required = encoder.pos + byteLength;
 	if (required <= encoder.buffer.length) {
@@ -68,11 +82,13 @@ export function ensureCapacity(encoder: Encoder, byteLength: number): void {
 	encoder.view = new DataView(next.buffer);
 }
 
+/** Writes one unsigned byte. */
 export function writeUint8(encoder: Encoder, value: number): void {
 	ensureCapacity(encoder, 1);
 	encoder.buffer[encoder.pos++] = value;
 }
 
+/** Reads one unsigned byte. */
 export function readUint8(decoder: Decoder): number {
 	if (decoder.pos >= decoder.arr.length) {
 		throw new Error("Unexpected end of array");
@@ -80,12 +96,14 @@ export function readUint8(decoder: Decoder): number {
 	return decoder.arr[decoder.pos++]!;
 }
 
+/** Writes raw bytes without a length prefix. */
 export function writeUint8Array(encoder: Encoder, value: Uint8Array): void {
 	ensureCapacity(encoder, value.byteLength);
 	encoder.buffer.set(value, encoder.pos);
 	encoder.pos += value.byteLength;
 }
 
+/** Reads raw bytes without reading a length prefix. */
 export function readUint8Array(decoder: Decoder, byteLength: number): Uint8Array {
 	if (decoder.pos + byteLength > decoder.arr.length) {
 		throw new Error("Unexpected end of array");
@@ -100,12 +118,14 @@ export function readUint8Array(decoder: Decoder, byteLength: number): Uint8Array
 	return value;
 }
 
+/** Writes a 32-bit floating-point number in little-endian byte order. */
 export function writeFloat32(encoder: Encoder, value: number): void {
 	ensureCapacity(encoder, 4);
 	encoder.view.setFloat32(encoder.pos, value, true);
 	encoder.pos += 4;
 }
 
+/** Reads a 32-bit floating-point number in little-endian byte order. */
 export function readFloat32(decoder: Decoder): number {
 	if (decoder.pos + 4 > decoder.arr.length) {
 		throw new Error("Unexpected end of array");
@@ -116,12 +136,14 @@ export function readFloat32(decoder: Decoder): number {
 	return value;
 }
 
+/** Writes a 64-bit floating-point number in little-endian byte order. */
 export function writeFloat64(encoder: Encoder, value: number): void {
 	ensureCapacity(encoder, 8);
 	encoder.view.setFloat64(encoder.pos, value, true);
 	encoder.pos += 8;
 }
 
+/** Reads a 64-bit floating-point number in little-endian byte order. */
 export function readFloat64(decoder: Decoder): number {
 	if (decoder.pos + 8 > decoder.arr.length) {
 		throw new Error("Unexpected end of array");
@@ -132,6 +154,7 @@ export function readFloat64(decoder: Decoder): number {
 	return value;
 }
 
+/** Writes an unsigned safe integer using variable-length encoding. */
 export function writeVarUint(encoder: Encoder, value: number): void {
 	if (value >= 0 && value <= bits7) {
 		ensureCapacity(encoder, 1);
@@ -168,6 +191,7 @@ export function writeVarUint(encoder: Encoder, value: number): void {
 	encoder.pos = pos;
 }
 
+/** Reads an unsigned safe integer using variable-length encoding. */
 export function readVarUint(decoder: Decoder): number {
 	const buffer = decoder.arr;
 	let pos = decoder.pos;
@@ -255,6 +279,7 @@ function readVarUintSlow(decoder: Decoder, value: number, multiplier: number): n
 	throw new Error("Unexpected end of array");
 }
 
+/** Writes a signed safe integer using variable-length encoding. */
 export function writeVarInt(encoder: Encoder, value: number): void {
 	const isNegative = value !== 0 ? value < 0 : 1 / value < 0;
 	if (isNegative) {
@@ -299,6 +324,7 @@ export function writeVarInt(encoder: Encoder, value: number): void {
 	encoder.pos = pos;
 }
 
+/** Reads a signed safe integer using variable-length encoding. */
 export function readVarInt(decoder: Decoder): number {
 	const buffer = decoder.arr;
 	let pos = decoder.pos;
@@ -387,6 +413,7 @@ function readVarIntSlow(decoder: Decoder, value: number, multiplier: number, sig
 	throw new Error("Unexpected end of array");
 }
 
+/** Writes a signed bigint using variable-length encoding. */
 export function writeVarBigInt(encoder: Encoder, value: bigint, maxBytes = 128): void {
 	validateMaxBytes(maxBytes);
 
@@ -412,6 +439,7 @@ export function writeVarBigInt(encoder: Encoder, value: bigint, maxBytes = 128):
 	}
 }
 
+/** Reads a signed bigint using variable-length encoding. */
 export function readVarBigInt(decoder: Decoder, maxBytes = 128): bigint {
 	validateMaxBytes(maxBytes);
 
@@ -441,6 +469,7 @@ function validateMaxBytes(maxBytes: number): void {
 	}
 }
 
+/** Writes a valid `Date` as its millisecond timestamp. */
 export function writeDate(encoder: Encoder, value: Date): void {
 	const time = value.getTime();
 	if (Number.isNaN(time)) {
@@ -449,6 +478,7 @@ export function writeDate(encoder: Encoder, value: Date): void {
 	writeFloat64(encoder, time);
 }
 
+/** Reads a `Date` from a millisecond timestamp. */
 export function readDate(decoder: Decoder): Date {
 	const value = new Date(readFloat64(decoder));
 	if (Number.isNaN(value.getTime())) {
@@ -457,15 +487,18 @@ export function readDate(decoder: Decoder): Date {
 	return value;
 }
 
+/** Writes a byte array prefixed by its variable-length byte length. */
 export function writeVarUint8Array(encoder: Encoder, value: Uint8Array): void {
 	writeVarUint(encoder, value.byteLength);
 	writeUint8Array(encoder, value);
 }
 
+/** Reads a byte array prefixed by its variable-length byte length. */
 export function readVarUint8Array(decoder: Decoder): Uint8Array {
 	return readUint8Array(decoder, readVarUint(decoder));
 }
 
+/** Writes a UTF-8 string prefixed by its variable-length byte length. */
 export function writeVarString(encoder: Encoder, value: string): void {
 	const start = encoder.pos;
 	ensureCapacity(encoder, value.length + 8);
@@ -514,6 +547,7 @@ function writeVarStringUtf8(encoder: Encoder, value: string): void {
 	writeVarUint8Array(encoder, textEncoder.encode(value));
 }
 
+/** Reads a UTF-8 string prefixed by its variable-length byte length. */
 export function readVarString(decoder: Decoder): string {
 	const byteLength = readVarUint(decoder);
 	if (decoder.pos + byteLength > decoder.arr.length) {
@@ -523,6 +557,7 @@ export function readVarString(decoder: Decoder): string {
 	return readStringBytes(decoder, byteLength);
 }
 
+/** Reads a length-prefixed UTF-8 string with a caller-provided cache slot. */
 export function readCachedVarString(
 	decoder: Decoder,
 	cache: Array<CachedString | undefined>,

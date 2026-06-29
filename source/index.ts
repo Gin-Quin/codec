@@ -44,11 +44,15 @@ export type {
 } from "./schema";
 export { array, bigint, map, object, optional, set, tuple, union } from "./schema";
 
+/** Encodes and decodes values for a compiled schema. */
 export interface Codec<T> {
+	/** Encodes a value into an exact-sized byte array. */
 	encode(value: T): Uint8Array<ArrayBuffer>;
+	/** Decodes a value from a byte array or an existing decoder. */
 	decode(buffer: Uint8Array | Decoder): T;
 }
 
+/** Compiles a schema into reusable encode and decode functions. */
 export function createCodec<T extends Schema>(schema: T): Codec<InferType<T>> {
 	const write = compileWriter(schema);
 	const read = compileReader(schema);
