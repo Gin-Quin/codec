@@ -49,9 +49,3 @@ Available serializers:
 - `v8`
 - `flatbuffers-flexbuffers`
 - `bson`
-
-View saved results from the repository root:
-
-```sh
-bun benchmarks.html
-```
