@@ -1,5 +1,17 @@
 import { fromBinary, fromJson, toBinary, toJson } from "@bufbuild/protobuf";
 import { StructSchema } from "@bufbuild/protobuf/wkt";
+import {
+	array as bunkerArray,
+	boolean as bunkerBoolean,
+	bunker,
+	debunker,
+	integer as bunkerInteger,
+	number as bunkerNumber,
+	object as bunkerObject,
+	positiveInteger as bunkerPositiveInteger,
+	type Schema as BunkerSchema,
+	string as bunkerString,
+} from "@digitak/bunker";
 import { decode as messagePackDecode, encode as messagePackEncode } from "@msgpack/msgpack";
 import avro from "avsc";
 import { decode as cborDecode, encode as cborEncode } from "cbor-x";
@@ -25,6 +37,7 @@ type EncodedValue = ArrayBuffer | Uint8Array | string;
 
 interface BenchmarkCase {
 	avroSchema: avro.Schema;
+	bunkerSchema: BunkerSchema;
 	codecSchema: Schema;
 	description: string;
 	iterations: number;
@@ -169,6 +182,27 @@ const profileSchema = object({
 	ratios: map("float64"),
 });
 
+const bunkerProfileSchema = bunkerObject({
+	id: bunkerPositiveInteger,
+	username: bunkerString,
+	active: bunkerBoolean,
+	age: bunkerPositiveInteger,
+	rating: bunkerNumber,
+	score: bunkerInteger,
+	summary: bunkerString,
+	settings: bunkerObject({
+		theme: bunkerString,
+		email: bunkerBoolean,
+		sms: bunkerBoolean,
+		locale: bunkerString,
+		timezone: bunkerString,
+		refreshInterval: bunkerPositiveInteger,
+	}),
+	tags: bunkerArray(bunkerString),
+	counters: createBunkerObjectFromKeys("counter", 16, bunkerPositiveInteger),
+	ratios: createBunkerObjectFromKeys("ratio", 12, bunkerNumber),
+});
+
 const taskBoardSchema = object({
 	boardId: "string",
 	title: "string",
@@ -205,6 +239,48 @@ const taskBoardSchema = object({
 	totals: map("uint"),
 });
 
+const bunkerTaskSchema = bunkerObject({
+	boardId: bunkerString,
+	title: bunkerString,
+	revision: bunkerPositiveInteger,
+	archived: bunkerBoolean,
+	owner: bunkerObject({
+		id: bunkerPositiveInteger,
+		name: bunkerString,
+		reputation: bunkerInteger,
+	}),
+	columns: bunkerArray(
+		bunkerObject({
+			id: bunkerString,
+			name: bunkerString,
+			position: bunkerPositiveInteger,
+		}),
+	),
+	tasks: bunkerArray(
+		bunkerObject({
+			id: bunkerPositiveInteger,
+			columnId: bunkerString,
+			title: bunkerString,
+			body: bunkerString,
+			done: bunkerBoolean,
+			priority: bunkerPositiveInteger,
+			estimate: bunkerNumber,
+			assignee: bunkerObject({
+				id: bunkerPositiveInteger,
+				name: bunkerString,
+			}),
+			labels: bunkerArray(bunkerString),
+		}),
+	),
+	totals: bunkerObject({
+		todo: bunkerPositiveInteger,
+		doing: bunkerPositiveInteger,
+		review: bunkerPositiveInteger,
+		blocked: bunkerPositiveInteger,
+		done: bunkerPositiveInteger,
+	}),
+});
+
 const searchIndexSchema = object({
 	documentId: "string",
 	title: "string",
@@ -234,6 +310,37 @@ const searchIndexSchema = object({
 			label: "string",
 		}),
 	),
+});
+
+const bunkerSearchIndexEntrySchema = bunkerObject({
+	sectionId: bunkerString,
+	offset: bunkerPositiveInteger,
+	length: bunkerPositiveInteger,
+	weight: bunkerPositiveInteger,
+	label: bunkerString,
+});
+
+const bunkerSearchIndexSchema = bunkerObject({
+	documentId: bunkerString,
+	title: bunkerString,
+	snapshot: bunkerString,
+	metrics: bunkerObject({
+		version: bunkerPositiveInteger,
+		words: bunkerPositiveInteger,
+		score: bunkerPositiveInteger,
+		published: bunkerBoolean,
+	}),
+	sections: bunkerArray(
+		bunkerObject({
+			id: bunkerString,
+			heading: bunkerString,
+			depth: bunkerPositiveInteger,
+			wordCount: bunkerPositiveInteger,
+			checksum: bunkerPositiveInteger,
+			terms: bunkerArray(bunkerString),
+		}),
+	),
+	index: createBunkerObjectFromKeys("key", 160, bunkerSearchIndexEntrySchema, 3),
 });
 
 const cases: BenchmarkCase[] = [
@@ -269,6 +376,7 @@ const cases: BenchmarkCase[] = [
 				{ name: "ratios", type: { type: "map", values: "double" } },
 			],
 		},
+		bunkerSchema: bunkerProfileSchema,
 		codecSchema: profileSchema,
 		description: "One medium nested object with strings, numbers, booleans, arrays, and maps.",
 		iterations: 8_000,
@@ -346,6 +454,7 @@ const cases: BenchmarkCase[] = [
 				{ name: "totals", type: { type: "map", values: "int" } },
 			],
 		},
+		bunkerSchema: bunkerTaskSchema,
 		codecSchema: taskBoardSchema,
 		description: "A collection-like object with nested records and repeated child objects.",
 		iterations: 350,
@@ -411,6 +520,7 @@ const cases: BenchmarkCase[] = [
 				},
 			],
 		},
+		bunkerSchema: bunkerSearchIndexSchema,
 		codecSchema: searchIndexSchema,
 		description: "A large object with a long string snapshot, arrays, and a large string-keyed index.",
 		iterations: 55,
@@ -574,6 +684,26 @@ async function createSerializers(): Promise<{
 			setup: () => ({
 				decode: (encoded) => JSON.parse(encoded as string),
 				encode: (value) => JSON.stringify(value),
+			}),
+		},
+		{
+			format: "Bunker",
+			mode: "document",
+			name: "bunker",
+			note: "Uses bunker(value), so Bunker discovers and embeds the schema on each encode.",
+			setup: () => ({
+				decode: (encoded) => debunker(encoded as Uint8Array),
+				encode: (value) => bunker(value),
+			}),
+		},
+		{
+			format: "Bunker",
+			mode: "schema",
+			name: "bunker-schema",
+			note: "Passes an explicit schema to bunker(value, schema), so Bunker does not discover the schema during encode.",
+			setup: (benchmarkCase) => ({
+				decode: (encoded) => debunker(encoded as Uint8Array),
+				encode: (value) => bunker(value, benchmarkCase.bunkerSchema),
 			}),
 		},
 		{
@@ -1129,6 +1259,23 @@ function createRatioMap(prefix: string, count: number): JsonObject {
 	return Object.fromEntries(
 		Array.from({ length: count }, (_, index) => [`${prefix}-${index}`, round((index + 1) / 13, 4)]),
 	) as JsonObject;
+}
+
+function createBunkerObjectFromKeys(
+	prefix: string,
+	count: number,
+	schema: BunkerSchema,
+	padStart = 0,
+): BunkerSchema {
+	const fields: Record<string, BunkerSchema> = {};
+	for (let index = 0; index < count; index++) {
+		const key =
+			padStart > 0
+				? `${prefix}-${index.toString().padStart(padStart, "0")}`
+				: `${prefix}-${index}`;
+		fields[key] = schema;
+	}
+	return bunkerObject(fields);
 }
 
 function createStringList(prefix: string, count: number): string[] {

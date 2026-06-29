@@ -60,25 +60,38 @@ export interface Codec<T> {
 export function createCodec<T extends Schema>(schema: T): Codec<InferType<T>> {
 	const write = compileWriter(schema);
 	const read = compileReader(schema);
-	let nextEncoderSize: number | undefined;
+	const encoder = createEncoder();
+	const decoder = createDecoder(new Uint8Array(0));
+	let nextViewEncoderSize: number | undefined;
 
-	function writeValue(value: InferType<T>) {
-		const encoder = createEncoder(nextEncoderSize);
+	function writeCopiedValue(value: InferType<T>) {
+		encoder.pos = 0;
 		write(encoder, value);
-		nextEncoderSize = encoder.pos;
 		return encoder;
+	}
+
+	function writeViewValue(value: InferType<T>) {
+		const viewEncoder = createEncoder(nextViewEncoderSize);
+		write(viewEncoder, value);
+		nextViewEncoderSize = viewEncoder.pos;
+		return viewEncoder;
 	}
 
 	return {
 		encode: (value: InferType<T>): Uint8Array<ArrayBuffer> => {
-			return toUint8Array(writeValue(value));
+			return toUint8Array(writeCopiedValue(value));
 		},
 		encodeView: (value: InferType<T>): Uint8Array<ArrayBuffer> => {
-			return toUint8ArrayView(writeValue(value));
+			return toUint8ArrayView(writeViewValue(value));
 		},
 		decode: (buffer: Uint8Array | Decoder): InferType<T> => {
-			const decoder =
-				buffer instanceof Uint8Array ? createDecoder(buffer) : buffer;
+			if (!(buffer instanceof Uint8Array)) {
+				return read(buffer);
+			}
+
+			decoder.arr = buffer;
+			decoder.view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+			decoder.pos = 0;
 			return read(decoder);
 		},
 	} as Codec<InferType<T>>;

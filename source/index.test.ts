@@ -111,6 +111,9 @@ describe("signature codec", () => {
 		const encoded = codec.encode(value);
 		expect(encoded.buffer.byteLength).toBe(encoded.byteLength);
 		expect(codec.decode(encoded)).toBe(value);
+		const overwritten = codec.encode("b".repeat(240));
+		expect(codec.decode(encoded)).toBe(value);
+		expect(codec.decode(overwritten)).toBe("b".repeat(240));
 
 		const encodedView = codec.encodeView(value);
 		expect(codec.decode(encodedView)).toBe(value);
@@ -392,6 +395,17 @@ describe("signature codec", () => {
 		const decoded = codec.decode(encoded);
 
 		expect(decoded).toEqual(value);
+	});
+
+	test("map decode handles changed key shapes with the same codec", () => {
+		const codec = createCodec(map("uint"));
+
+		const first = { aa: 1, bb: 2 };
+		const second = { cc: 3, dd: 4 };
+
+		expect(codec.decode(codec.encode(first))).toEqual(first);
+		expect(codec.decode(codec.encode(second))).toEqual(second);
+		expect(codec.decode(codec.encode(first))).toEqual(first);
 	});
 
 	test("map with object values", () => {

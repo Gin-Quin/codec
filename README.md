@@ -115,16 +115,19 @@ for (const value of values) {
 }
 ```
 
-Use `encode` when you need an exact-sized copy. Use `encodeView` when a
-subarray view is acceptable and you want to avoid the final copy.
+Use `encode` when you need an exact-sized copy. It reuses the codec's encoder
+buffer on repeated calls, then returns an exact-sized `Uint8Array` copy. Use
+`encodeView` when a subarray view is acceptable and you want to avoid the final
+copy.
 
 ```ts
 const copied = codec.encode(value);
 const view = codec.encodeView(value);
 ```
 
-The codec also remembers the previous encoded size and uses it as the next
-encoder's initial buffer size, which helps repeated similarly-sized payloads.
+For `encodeView`, the codec remembers the previous encoded size and uses it as
+the next encoder's initial buffer size, which helps repeated similarly-sized
+payloads.
 
 ## Schema Reference
 
@@ -522,6 +525,26 @@ readVarUint8Array(decoder);
 
 Benchmarks package to compare codec with other popular serializers and deserializers.
 
+Example `profile` benchmark run on Bun:
+
+| Serializer | Bytes | Encode us | Decode us | Round trip us |
+| --- | ---: | ---: | ---: | ---: |
+| `codec` | 803 | 0.81 | 1.07 | 1.88 |
+| `json` | 1082 | 0.77 | 1.28 | 2.07 |
+| `avsc` | 806 | 1.16 | 2.82 | 4.27 |
+| `msgpackr` | 949 | 1.23 | 3.32 | 4.55 |
+| `bunker-schema` | 978 | 5.70 | 8.57 | 14.33 |
+| `bunker` | 978 | 6.28 | 8.78 | 15.02 |
+
+The fast path comes from a few deliberate implementation choices:
+
+- schemas compile into specialized reader/writer functions, so hot paths do not walk a schema tree;
+- object readers construct stable object shapes directly instead of assigning fields through a generic interpreter;
+- fixed-width booleans and floats are inlined in generated code, with cached `DataView` instances for binary number access;
+- small ASCII strings avoid `TextEncoder`/`TextDecoder` overhead, while non-ASCII strings fall back to UTF-8 handling;
+- repeated map keys are cached by byte pattern during decode, which helps payloads with stable string-keyed maps;
+- repeated `encode` calls reuse the codec's encoder buffer before returning the exact-sized copy.
+
 Run with:
 
 ```sh
@@ -560,6 +583,8 @@ Available serializers:
 - `codec`
 - `codec-view`
 - `json`
+- `bunker`
+- `bunker-schema`
 - `msgpackr`
 - `@msgpack/msgpack`
 - `cbor-x`

@@ -38,6 +38,8 @@ Available serializers:
 - `codec`
 - `codec-view`
 - `json`
+- `bunker`
+- `bunker-schema`
 - `msgpackr`
 - `@msgpack/msgpack`
 - `cbor-x`

@@ -10,6 +10,11 @@ const textDecoder = new TextDecoder();
 const stringBuffer = new Uint8Array(30_000);
 const maxStringBufferSize = stringBuffer.length / 3;
 
+interface CachedString {
+	bytes: Uint8Array;
+	value: string;
+}
+
 export class Encoder {
 	buffer: Uint8Array<ArrayBuffer>;
 	view: DataView<ArrayBuffer>;
@@ -54,7 +59,7 @@ export function toUint8ArrayView(encoder: Encoder): Uint8Array<ArrayBuffer> {
 	return encoder.buffer.subarray(0, encoder.pos);
 }
 
-function ensureCapacity(encoder: Encoder, byteLength: number): void {
+export function ensureCapacity(encoder: Encoder, byteLength: number): void {
 	const required = encoder.pos + byteLength;
 	if (required <= encoder.buffer.length) {
 		return;
@@ -136,6 +141,12 @@ export function readFloat64(decoder: Decoder): number {
 }
 
 export function writeVarUint(encoder: Encoder, value: number): void {
+	if (value >= 0 && value <= bits7) {
+		ensureCapacity(encoder, 1);
+		encoder.buffer[encoder.pos++] = value;
+		return;
+	}
+
 	if (value >= 0 && value <= maxUint32) {
 		ensureCapacity(encoder, 5);
 		const buffer = encoder.buffer;
@@ -256,6 +267,12 @@ export function writeVarInt(encoder: Encoder, value: number): void {
 	const isNegative = value !== 0 ? value < 0 : 1 / value < 0;
 	if (isNegative) {
 		value = -value;
+	}
+
+	if (value <= bits6) {
+		ensureCapacity(encoder, 1);
+		encoder.buffer[encoder.pos++] = (isNegative ? bit7 : 0) | value;
+		return;
 	}
 
 	if (value <= maxUint32) {
@@ -511,6 +528,39 @@ export function readVarString(decoder: Decoder): string {
 		throw new Error("Unexpected end of array");
 	}
 
+	return readStringBytes(decoder, byteLength);
+}
+
+export function readCachedVarString(
+	decoder: Decoder,
+	cache: Array<CachedString | undefined>,
+	index: number,
+): string {
+	const byteLength = readVarUint(decoder);
+	if (decoder.pos + byteLength > decoder.arr.length) {
+		throw new Error("Unexpected end of array");
+	}
+
+	const cached = cache[index];
+	if (
+		cached !== undefined &&
+		cached.bytes.byteLength === byteLength &&
+		bytesEqual(decoder.arr, decoder.pos, cached.bytes)
+	) {
+		decoder.pos += byteLength;
+		return cached.value;
+	}
+
+	const start = decoder.pos;
+	const value = readStringBytes(decoder, byteLength);
+	cache[index] = {
+		bytes: decoder.arr.slice(start, start + byteLength),
+		value,
+	};
+	return value;
+}
+
+function readStringBytes(decoder: Decoder, byteLength: number): string {
 	if (byteLength <= maxDirectAsciiStringSize) {
 		let value = "";
 		for (let index = 0; index < byteLength; index++) {
@@ -529,4 +579,13 @@ export function readVarString(decoder: Decoder): string {
 	const value = textDecoder.decode(decoder.arr.subarray(decoder.pos, decoder.pos + byteLength));
 	decoder.pos += byteLength;
 	return value;
+}
+
+function bytesEqual(buffer: Uint8Array, pos: number, bytes: Uint8Array): boolean {
+	for (let index = 0; index < bytes.byteLength; index++) {
+		if (buffer[pos + index] !== bytes[index]) {
+			return false;
+		}
+	}
+	return true;
 }

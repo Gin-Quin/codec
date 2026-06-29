@@ -9,362 +9,424 @@
         {
           "bytes": 803,
           "decode": {
-            "maxMs": 0.003669,
-            "medianMs": 0.00262,
-            "minMs": 0.002539,
-            "p95Ms": 0.003669
+            "maxMs": 0.001663,
+            "medianMs": 0.001102,
+            "minMs": 0.000834,
+            "p95Ms": 0.001663
           },
           "encode": {
-            "maxMs": 0.001288,
-            "medianMs": 0.000988,
-            "minMs": 0.00096,
-            "p95Ms": 0.001288
+            "maxMs": 0.001566,
+            "medianMs": 0.00091,
+            "minMs": 0.000807,
+            "p95Ms": 0.001566
           },
           "format": "codec binary",
           "mode": "schema",
           "name": "codec",
           "opsPerSecond": {
-            "decode": 381679.39,
-            "encode": 1012145.75,
-            "roundTrip": 278318.95
+            "decode": 907441.02,
+            "encode": 1098901.1,
+            "roundTrip": 523834.47
           },
           "roundTrip": {
-            "maxMs": 0.004958,
-            "medianMs": 0.003593,
-            "minMs": 0.003561,
-            "p95Ms": 0.004958
+            "maxMs": 0.003228,
+            "medianMs": 0.001909,
+            "minMs": 0.001738,
+            "p95Ms": 0.003228
           },
           "status": "ok"
         },
         {
           "bytes": 803,
           "decode": {
-            "maxMs": 0.003178,
-            "medianMs": 0.002581,
-            "minMs": 0.002459,
-            "p95Ms": 0.003178
+            "maxMs": 0.001489,
+            "medianMs": 0.000979,
+            "minMs": 0.000866,
+            "p95Ms": 0.001489
           },
           "encode": {
-            "maxMs": 0.00125,
-            "medianMs": 0.001025,
-            "minMs": 0.001003,
-            "p95Ms": 0.00125
+            "maxMs": 0.0012,
+            "medianMs": 0.001009,
+            "minMs": 0.000982,
+            "p95Ms": 0.0012
           },
           "format": "codec binary",
           "mode": "schema",
           "name": "codec-view",
           "note": "Uses encodeView(), so the encoded value is a view into codec's internal encoder buffer.",
           "opsPerSecond": {
-            "decode": 387446.73,
-            "encode": 975609.76,
-            "roundTrip": 278784.5
+            "decode": 1021450.46,
+            "encode": 991080.28,
+            "roundTrip": 490196.08
           },
           "roundTrip": {
-            "maxMs": 0.004428,
-            "medianMs": 0.003587,
-            "minMs": 0.003462,
-            "p95Ms": 0.004428
+            "maxMs": 0.002671,
+            "medianMs": 0.00204,
+            "minMs": 0.001861,
+            "p95Ms": 0.002671
           },
           "status": "ok"
         },
         {
           "bytes": 1082,
           "decode": {
-            "maxMs": 0.001328,
-            "medianMs": 0.001276,
-            "minMs": 0.001236,
-            "p95Ms": 0.001328
+            "maxMs": 0.00145,
+            "medianMs": 0.001319,
+            "minMs": 0.001273,
+            "p95Ms": 0.00145
           },
           "encode": {
-            "maxMs": 0.000802,
-            "medianMs": 0.000728,
-            "minMs": 0.000712,
-            "p95Ms": 0.000802
+            "maxMs": 0.000842,
+            "medianMs": 0.000811,
+            "minMs": 0.000742,
+            "p95Ms": 0.000842
           },
           "format": "JSON text",
           "mode": "document",
           "name": "json",
           "opsPerSecond": {
-            "decode": 783699.06,
-            "encode": 1373626.37,
-            "roundTrip": 497512.44
+            "decode": 758150.11,
+            "encode": 1233045.62,
+            "roundTrip": 470809.79
           },
           "roundTrip": {
-            "maxMs": 0.002123,
-            "medianMs": 0.00201,
-            "minMs": 0.001947,
-            "p95Ms": 0.002123
+            "maxMs": 0.002292,
+            "medianMs": 0.002124,
+            "minMs": 0.002015,
+            "p95Ms": 0.002292
+          },
+          "status": "ok"
+        },
+        {
+          "bytes": 978,
+          "decode": {
+            "maxMs": 0.008982,
+            "medianMs": 0.008805,
+            "minMs": 0.008529,
+            "p95Ms": 0.008982
+          },
+          "encode": {
+            "maxMs": 0.007117,
+            "medianMs": 0.006743,
+            "minMs": 0.006582,
+            "p95Ms": 0.007117
+          },
+          "format": "Bunker",
+          "mode": "document",
+          "name": "bunker",
+          "note": "Uses bunker(value), so Bunker discovers and embeds the schema on each encode.",
+          "opsPerSecond": {
+            "decode": 113571.83,
+            "encode": 148301.94,
+            "roundTrip": 64151.91
+          },
+          "roundTrip": {
+            "maxMs": 0.016085,
+            "medianMs": 0.015588,
+            "minMs": 0.015117,
+            "p95Ms": 0.016085
+          },
+          "status": "ok"
+        },
+        {
+          "bytes": 978,
+          "decode": {
+            "maxMs": 0.00967,
+            "medianMs": 0.008832,
+            "minMs": 0.008727,
+            "p95Ms": 0.00967
+          },
+          "encode": {
+            "maxMs": 0.006104,
+            "medianMs": 0.005936,
+            "minMs": 0.00581,
+            "p95Ms": 0.006104
+          },
+          "format": "Bunker",
+          "mode": "schema",
+          "name": "bunker-schema",
+          "note": "Passes an explicit schema to bunker(value, schema), so Bunker does not discover the schema during encode.",
+          "opsPerSecond": {
+            "decode": 113224.64,
+            "encode": 168463.61,
+            "roundTrip": 67503.71
+          },
+          "roundTrip": {
+            "maxMs": 0.015775,
+            "medianMs": 0.014814,
+            "minMs": 0.014677,
+            "p95Ms": 0.015775
           },
           "status": "ok"
         },
         {
           "bytes": 949,
           "decode": {
-            "maxMs": 0.003294,
-            "medianMs": 0.003196,
-            "minMs": 0.003179,
-            "p95Ms": 0.003294
+            "maxMs": 0.003665,
+            "medianMs": 0.003305,
+            "minMs": 0.003227,
+            "p95Ms": 0.003665
           },
           "encode": {
-            "maxMs": 0.001405,
-            "medianMs": 0.001193,
-            "minMs": 0.001174,
-            "p95Ms": 0.001405
+            "maxMs": 0.00154,
+            "medianMs": 0.001285,
+            "minMs": 0.001242,
+            "p95Ms": 0.00154
           },
           "format": "MessagePack",
           "mode": "document",
           "name": "msgpackr",
           "opsPerSecond": {
-            "decode": 312891.11,
-            "encode": 838222.97,
-            "roundTrip": 226963.23
+            "decode": 302571.86,
+            "encode": 778210.12,
+            "roundTrip": 219298.25
           },
           "roundTrip": {
-            "maxMs": 0.004686,
-            "medianMs": 0.004406,
-            "minMs": 0.004366,
-            "p95Ms": 0.004686
+            "maxMs": 0.005206,
+            "medianMs": 0.00456,
+            "minMs": 0.004532,
+            "p95Ms": 0.005206
           },
           "status": "ok"
         },
         {
           "bytes": 943,
           "decode": {
-            "maxMs": 0.003619,
-            "medianMs": 0.003156,
-            "minMs": 0.003074,
-            "p95Ms": 0.003619
+            "maxMs": 0.003879,
+            "medianMs": 0.003372,
+            "minMs": 0.003232,
+            "p95Ms": 0.003879
           },
           "encode": {
-            "maxMs": 0.002007,
-            "medianMs": 0.0017,
-            "minMs": 0.001679,
-            "p95Ms": 0.002007
+            "maxMs": 0.002157,
+            "medianMs": 0.001833,
+            "minMs": 0.001799,
+            "p95Ms": 0.002157
           },
           "format": "MessagePack",
           "mode": "document",
           "name": "@msgpack/msgpack",
           "opsPerSecond": {
-            "decode": 316856.78,
-            "encode": 588235.29,
-            "roundTrip": 205930.81
+            "decode": 296559.91,
+            "encode": 545553.74,
+            "roundTrip": 190730.5
           },
           "roundTrip": {
-            "maxMs": 0.005626,
-            "medianMs": 0.004856,
-            "minMs": 0.004753,
-            "p95Ms": 0.005626
+            "maxMs": 0.006036,
+            "medianMs": 0.005243,
+            "minMs": 0.005031,
+            "p95Ms": 0.006036
           },
           "status": "ok"
         },
         {
           "bytes": 957,
           "decode": {
-            "maxMs": 0.004378,
-            "medianMs": 0.004087,
-            "minMs": 0.003459,
-            "p95Ms": 0.004378
+            "maxMs": 0.004807,
+            "medianMs": 0.00428,
+            "minMs": 0.003625,
+            "p95Ms": 0.004807
           },
           "encode": {
-            "maxMs": 0.001341,
-            "medianMs": 0.001154,
-            "minMs": 0.00113,
-            "p95Ms": 0.001341
+            "maxMs": 0.001491,
+            "medianMs": 0.001175,
+            "minMs": 0.001162,
+            "p95Ms": 0.001491
           },
           "format": "CBOR",
           "mode": "document",
           "name": "cbor-x",
           "opsPerSecond": {
-            "decode": 244678.25,
-            "encode": 866551.13,
-            "roundTrip": 191717.79
+            "decode": 233644.86,
+            "encode": 851063.83,
+            "roundTrip": 182882.22
           },
           "roundTrip": {
-            "maxMs": 0.005718,
-            "medianMs": 0.005216,
-            "minMs": 0.004629,
-            "p95Ms": 0.005718
+            "maxMs": 0.006298,
+            "medianMs": 0.005468,
+            "minMs": 0.004866,
+            "p95Ms": 0.006298
           },
           "status": "ok"
         },
         {
           "bytes": 806,
           "decode": {
-            "maxMs": 0.003275,
-            "medianMs": 0.00307,
-            "minMs": 0.002712,
-            "p95Ms": 0.003275
+            "maxMs": 0.003472,
+            "medianMs": 0.003178,
+            "minMs": 0.002805,
+            "p95Ms": 0.003472
           },
           "encode": {
-            "maxMs": 0.001208,
-            "medianMs": 0.001152,
-            "minMs": 0.001093,
-            "p95Ms": 0.001208
+            "maxMs": 0.001556,
+            "medianMs": 0.001144,
+            "minMs": 0.001126,
+            "p95Ms": 0.001556
           },
           "format": "Avro",
           "mode": "schema",
           "name": "avsc",
           "opsPerSecond": {
-            "decode": 325732.9,
-            "encode": 868055.56,
-            "roundTrip": 237247.92
+            "decode": 314663.31,
+            "encode": 874125.87,
+            "roundTrip": 228414.8
           },
           "roundTrip": {
-            "maxMs": 0.004483,
-            "medianMs": 0.004215,
-            "minMs": 0.003805,
-            "p95Ms": 0.004483
+            "maxMs": 0.004688,
+            "medianMs": 0.004378,
+            "minMs": 0.003931,
+            "p95Ms": 0.004688
           },
           "status": "ok"
         },
         {
           "bytes": 1369,
           "decode": {
-            "maxMs": 0.008194,
-            "medianMs": 0.007578,
-            "minMs": 0.007448,
-            "p95Ms": 0.008194
+            "maxMs": 0.008696,
+            "medianMs": 0.0082,
+            "minMs": 0.008,
+            "p95Ms": 0.008696
           },
           "encode": {
-            "maxMs": 0.007571,
-            "medianMs": 0.006709,
-            "minMs": 0.006582,
-            "p95Ms": 0.007571
+            "maxMs": 0.008154,
+            "medianMs": 0.00717,
+            "minMs": 0.006766,
+            "p95Ms": 0.008154
           },
           "format": "Protocol Buffers Struct",
           "mode": "document",
           "name": "protobufjs",
           "opsPerSecond": {
-            "decode": 131960.94,
-            "encode": 149053.51,
-            "roundTrip": 70363.07
+            "decode": 121951.22,
+            "encode": 139470.01,
+            "roundTrip": 65363.75
           },
           "roundTrip": {
-            "maxMs": 0.015765,
-            "medianMs": 0.014212,
-            "minMs": 0.014151,
-            "p95Ms": 0.015765
+            "maxMs": 0.01685,
+            "medianMs": 0.015299,
+            "minMs": 0.015222,
+            "p95Ms": 0.01685
           },
           "status": "ok"
         },
         {
           "bytes": 1369,
           "decode": {
-            "maxMs": 0.031683,
-            "medianMs": 0.03079,
-            "minMs": 0.03018,
-            "p95Ms": 0.031683
+            "maxMs": 0.032772,
+            "medianMs": 0.032513,
+            "minMs": 0.031711,
+            "p95Ms": 0.032772
           },
           "encode": {
-            "maxMs": 0.032271,
-            "medianMs": 0.031127,
-            "minMs": 0.030355,
-            "p95Ms": 0.032271
+            "maxMs": 0.034065,
+            "medianMs": 0.032656,
+            "minMs": 0.031718,
+            "p95Ms": 0.034065
           },
           "format": "Protocol Buffers Struct",
           "mode": "document",
           "name": "@bufbuild/protobuf",
           "opsPerSecond": {
-            "decode": 32478.08,
-            "encode": 32126.45,
-            "roundTrip": 16150.39
+            "decode": 30756.93,
+            "encode": 30622.24,
+            "roundTrip": 15307.84
           },
           "roundTrip": {
-            "maxMs": 0.063793,
-            "medianMs": 0.061918,
-            "minMs": 0.060836,
-            "p95Ms": 0.063793
+            "maxMs": 0.065777,
+            "medianMs": 0.065326,
+            "minMs": 0.064232,
+            "p95Ms": 0.065777
           },
           "status": "ok"
         },
         {
           "bytes": 1266,
           "decode": {
-            "maxMs": 0.002479,
-            "medianMs": 0.002328,
-            "minMs": 0.002284,
-            "p95Ms": 0.002479
+            "maxMs": 0.00262,
+            "medianMs": 0.002282,
+            "minMs": 0.002236,
+            "p95Ms": 0.00262
           },
           "encode": {
-            "maxMs": 0.002739,
-            "medianMs": 0.002419,
-            "minMs": 0.002332,
-            "p95Ms": 0.002739
+            "maxMs": 0.002437,
+            "medianMs": 0.002361,
+            "minMs": 0.002313,
+            "p95Ms": 0.002437
           },
           "format": "V8 serialized value",
           "mode": "runtime",
           "name": "v8",
           "opsPerSecond": {
-            "decode": 429553.26,
-            "encode": 413393.96,
-            "roundTrip": 211461.2
+            "decode": 438212.09,
+            "encode": 423549.34,
+            "roundTrip": 215192.6
           },
           "roundTrip": {
-            "maxMs": 0.005111,
-            "medianMs": 0.004729,
-            "minMs": 0.00469,
-            "p95Ms": 0.005111
+            "maxMs": 0.004972,
+            "medianMs": 0.004647,
+            "minMs": 0.00455,
+            "p95Ms": 0.004972
           },
           "status": "ok"
         },
         {
           "bytes": 1134,
           "decode": {
-            "maxMs": 0.009041,
-            "medianMs": 0.008899,
-            "minMs": 0.008377,
-            "p95Ms": 0.009041
+            "maxMs": 0.009724,
+            "medianMs": 0.009272,
+            "minMs": 0.00861,
+            "p95Ms": 0.009724
           },
           "encode": {
-            "maxMs": 0.017629,
-            "medianMs": 0.016877,
-            "minMs": 0.016491,
-            "p95Ms": 0.017629
+            "maxMs": 0.019535,
+            "medianMs": 0.01917,
+            "minMs": 0.01881,
+            "p95Ms": 0.019535
           },
           "format": "FlexBuffers",
           "mode": "document",
           "name": "flatbuffers-flexbuffers",
           "note": "Uses the FlatBuffers package's FlexBuffers object encoder.",
           "opsPerSecond": {
-            "decode": 112372.18,
-            "encode": 59252.24,
-            "roundTrip": 39126.69
+            "decode": 107851.6,
+            "encode": 52164.84,
+            "roundTrip": 35366.93
           },
           "roundTrip": {
-            "maxMs": 0.02667,
-            "medianMs": 0.025558,
-            "minMs": 0.025387,
-            "p95Ms": 0.02667
+            "maxMs": 0.029124,
+            "medianMs": 0.028275,
+            "minMs": 0.028115,
+            "p95Ms": 0.029124
           },
           "status": "ok"
         },
         {
           "bytes": 1127,
           "decode": {
-            "maxMs": 0.007125,
-            "medianMs": 0.006355,
-            "minMs": 0.00628,
-            "p95Ms": 0.007125
+            "maxMs": 0.00755,
+            "medianMs": 0.006711,
+            "minMs": 0.00649,
+            "p95Ms": 0.00755
           },
           "encode": {
-            "maxMs": 0.002885,
-            "medianMs": 0.002584,
-            "minMs": 0.002505,
-            "p95Ms": 0.002885
+            "maxMs": 0.003299,
+            "medianMs": 0.002764,
+            "minMs": 0.002665,
+            "p95Ms": 0.003299
           },
           "format": "BSON",
           "mode": "document",
           "name": "bson",
           "opsPerSecond": {
-            "decode": 157356.41,
-            "encode": 386996.9,
-            "roundTrip": 112296.46
+            "decode": 149009.09,
+            "encode": 361794.5,
+            "roundTrip": 106236.06
           },
           "roundTrip": {
-            "maxMs": 0.01001,
-            "medianMs": 0.008905,
-            "minMs": 0.008812,
-            "p95Ms": 0.01001
+            "maxMs": 0.010849,
+            "medianMs": 0.009413,
+            "minMs": 0.009312,
+            "p95Ms": 0.010849
           },
           "status": "ok"
         }
@@ -380,362 +442,424 @@
         {
           "bytes": 23664,
           "decode": {
-            "maxMs": 0.045638,
-            "medianMs": 0.031845,
-            "minMs": 0.026942,
-            "p95Ms": 0.045638
+            "maxMs": 0.058765,
+            "medianMs": 0.038474,
+            "minMs": 0.029841,
+            "p95Ms": 0.058765
           },
           "encode": {
-            "maxMs": 0.051638,
-            "medianMs": 0.034592,
-            "minMs": 0.027854,
-            "p95Ms": 0.051638
+            "maxMs": 0.033768,
+            "medianMs": 0.027114,
+            "minMs": 0.026488,
+            "p95Ms": 0.033768
           },
           "format": "codec binary",
           "mode": "schema",
           "name": "codec",
           "opsPerSecond": {
-            "decode": 31402.1,
-            "encode": 28908.42,
-            "roundTrip": 16000.77
+            "decode": 25991.58,
+            "encode": 36881.32,
+            "roundTrip": 13904.14
           },
           "roundTrip": {
-            "maxMs": 0.097276,
-            "medianMs": 0.062497,
-            "minMs": 0.054849,
-            "p95Ms": 0.097276
+            "maxMs": 0.087164,
+            "medianMs": 0.071921,
+            "minMs": 0.056455,
+            "p95Ms": 0.087164
           },
           "status": "ok"
         },
         {
           "bytes": 23664,
           "decode": {
-            "maxMs": 0.067484,
-            "medianMs": 0.029703,
-            "minMs": 0.027585,
-            "p95Ms": 0.067484
+            "maxMs": 0.04379,
+            "medianMs": 0.03928,
+            "minMs": 0.02979,
+            "p95Ms": 0.04379
           },
           "encode": {
-            "maxMs": 0.037226,
-            "medianMs": 0.031892,
-            "minMs": 0.02763,
-            "p95Ms": 0.037226
+            "maxMs": 0.055241,
+            "medianMs": 0.033136,
+            "minMs": 0.028698,
+            "p95Ms": 0.055241
           },
           "format": "codec binary",
           "mode": "schema",
           "name": "codec-view",
           "note": "Uses encodeView(), so the encoded value is a view into codec's internal encoder buffer.",
           "opsPerSecond": {
-            "decode": 33666.63,
-            "encode": 31355.83,
-            "roundTrip": 16263.86
+            "decode": 25458.25,
+            "encode": 30178.66,
+            "roundTrip": 14244.61
           },
           "roundTrip": {
-            "maxMs": 0.10471,
-            "medianMs": 0.061486,
-            "minMs": 0.055215,
-            "p95Ms": 0.10471
+            "maxMs": 0.094795,
+            "medianMs": 0.070202,
+            "minMs": 0.058488,
+            "p95Ms": 0.094795
           },
           "status": "ok"
         },
         {
           "bytes": 38080,
           "decode": {
-            "maxMs": 0.061697,
-            "medianMs": 0.059253,
-            "minMs": 0.058377,
-            "p95Ms": 0.061697
+            "maxMs": 0.065731,
+            "medianMs": 0.061986,
+            "minMs": 0.060148,
+            "p95Ms": 0.065731
           },
           "encode": {
-            "maxMs": 0.031622,
-            "medianMs": 0.028529,
-            "minMs": 0.027658,
-            "p95Ms": 0.031622
+            "maxMs": 0.036276,
+            "medianMs": 0.029969,
+            "minMs": 0.028982,
+            "p95Ms": 0.036276
           },
           "format": "JSON text",
           "mode": "document",
           "name": "json",
           "opsPerSecond": {
-            "decode": 16876.78,
-            "encode": 35052.05,
-            "roundTrip": 11349.96
+            "decode": 16132.68,
+            "encode": 33367.81,
+            "roundTrip": 10890.64
           },
           "roundTrip": {
-            "maxMs": 0.093318,
-            "medianMs": 0.088106,
-            "minMs": 0.08685,
-            "p95Ms": 0.093318
+            "maxMs": 0.102007,
+            "medianMs": 0.091822,
+            "minMs": 0.089741,
+            "p95Ms": 0.102007
+          },
+          "status": "ok"
+        },
+        {
+          "bytes": 14724,
+          "decode": {
+            "maxMs": 0.085106,
+            "medianMs": 0.083354,
+            "minMs": 0.080764,
+            "p95Ms": 0.085106
+          },
+          "encode": {
+            "maxMs": 0.28711,
+            "medianMs": 0.281319,
+            "minMs": 0.279612,
+            "p95Ms": 0.28711
+          },
+          "format": "Bunker",
+          "mode": "document",
+          "name": "bunker",
+          "note": "Uses bunker(value), so Bunker discovers and embeds the schema on each encode.",
+          "opsPerSecond": {
+            "decode": 11997.02,
+            "encode": 3554.68,
+            "roundTrip": 2736.79
+          },
+          "roundTrip": {
+            "maxMs": 0.370687,
+            "medianMs": 0.365392,
+            "minMs": 0.36227,
+            "p95Ms": 0.370687
+          },
+          "status": "ok"
+        },
+        {
+          "bytes": 14668,
+          "decode": {
+            "maxMs": 0.09182,
+            "medianMs": 0.08463,
+            "minMs": 0.082744,
+            "p95Ms": 0.09182
+          },
+          "encode": {
+            "maxMs": 0.196006,
+            "medianMs": 0.19517,
+            "minMs": 0.193754,
+            "p95Ms": 0.196006
+          },
+          "format": "Bunker",
+          "mode": "schema",
+          "name": "bunker-schema",
+          "note": "Passes an explicit schema to bunker(value, schema), so Bunker does not discover the schema during encode.",
+          "opsPerSecond": {
+            "decode": 11816.14,
+            "encode": 5123.74,
+            "roundTrip": 3584.52
+          },
+          "roundTrip": {
+            "maxMs": 0.286773,
+            "medianMs": 0.278977,
+            "minMs": 0.277241,
+            "p95Ms": 0.286773
           },
           "status": "ok"
         },
         {
           "bytes": 32949,
           "decode": {
-            "maxMs": 0.095433,
-            "medianMs": 0.087064,
-            "minMs": 0.083809,
-            "p95Ms": 0.095433
+            "maxMs": 0.095897,
+            "medianMs": 0.090686,
+            "minMs": 0.088318,
+            "p95Ms": 0.095897
           },
           "encode": {
-            "maxMs": 0.050031,
-            "medianMs": 0.045456,
-            "minMs": 0.044745,
-            "p95Ms": 0.050031
+            "maxMs": 0.051551,
+            "medianMs": 0.045906,
+            "minMs": 0.045182,
+            "p95Ms": 0.051551
           },
           "format": "MessagePack",
           "mode": "document",
           "name": "msgpackr",
           "opsPerSecond": {
-            "decode": 11485.8,
-            "encode": 21999.3,
-            "roundTrip": 7398.97
+            "decode": 11027.06,
+            "encode": 21783.64,
+            "roundTrip": 7321.07
           },
           "roundTrip": {
-            "maxMs": 0.141679,
-            "medianMs": 0.135154,
-            "minMs": 0.129118,
-            "p95Ms": 0.141679
+            "maxMs": 0.143717,
+            "medianMs": 0.136592,
+            "minMs": 0.1335,
+            "p95Ms": 0.143717
           },
           "status": "ok"
         },
         {
           "bytes": 32453,
           "decode": {
-            "maxMs": 0.207757,
-            "medianMs": 0.190859,
-            "minMs": 0.190135,
-            "p95Ms": 0.207757
+            "maxMs": 0.217855,
+            "medianMs": 0.206712,
+            "minMs": 0.196562,
+            "p95Ms": 0.217855
           },
           "encode": {
-            "maxMs": 0.080675,
-            "medianMs": 0.074854,
-            "minMs": 0.074644,
-            "p95Ms": 0.080675
+            "maxMs": 0.080788,
+            "medianMs": 0.078778,
+            "minMs": 0.077508,
+            "p95Ms": 0.080788
           },
           "format": "MessagePack",
           "mode": "document",
           "name": "@msgpack/msgpack",
           "opsPerSecond": {
-            "decode": 5239.47,
-            "encode": 13359.34,
-            "roundTrip": 3738.21
+            "decode": 4837.65,
+            "encode": 12693.9,
+            "roundTrip": 3507.79
           },
           "roundTrip": {
-            "maxMs": 0.284492,
-            "medianMs": 0.267508,
-            "minMs": 0.26482,
-            "p95Ms": 0.284492
+            "maxMs": 0.298044,
+            "medianMs": 0.28508,
+            "minMs": 0.276557,
+            "p95Ms": 0.298044
           },
           "status": "ok"
         },
         {
           "bytes": 33050,
           "decode": {
-            "maxMs": 0.184388,
-            "medianMs": 0.10177,
-            "minMs": 0.090929,
-            "p95Ms": 0.184388
+            "maxMs": 0.189889,
+            "medianMs": 0.103586,
+            "minMs": 0.094068,
+            "p95Ms": 0.189889
           },
           "encode": {
-            "maxMs": 0.051138,
-            "medianMs": 0.043469,
-            "minMs": 0.042729,
-            "p95Ms": 0.051138
+            "maxMs": 0.056348,
+            "medianMs": 0.045439,
+            "minMs": 0.043917,
+            "p95Ms": 0.056348
           },
           "format": "CBOR",
           "mode": "document",
           "name": "cbor-x",
           "opsPerSecond": {
-            "decode": 9826.08,
-            "encode": 23004.9,
-            "roundTrip": 6915.01
+            "decode": 9653.81,
+            "encode": 22007.53,
+            "roundTrip": 6765.72
           },
           "roundTrip": {
-            "maxMs": 0.227935,
-            "medianMs": 0.144613,
-            "minMs": 0.133658,
-            "p95Ms": 0.227935
+            "maxMs": 0.235361,
+            "medianMs": 0.147804,
+            "minMs": 0.139044,
+            "p95Ms": 0.235361
           },
           "status": "ok"
         },
         {
           "bytes": 23917,
           "decode": {
-            "maxMs": 0.047549,
-            "medianMs": 0.043744,
-            "minMs": 0.0425,
-            "p95Ms": 0.047549
+            "maxMs": 0.046791,
+            "medianMs": 0.046093,
+            "minMs": 0.042581,
+            "p95Ms": 0.046791
           },
           "encode": {
-            "maxMs": 0.050769,
-            "medianMs": 0.042779,
-            "minMs": 0.040831,
-            "p95Ms": 0.050769
+            "maxMs": 0.051742,
+            "medianMs": 0.04402,
+            "minMs": 0.041352,
+            "p95Ms": 0.051742
           },
           "format": "Avro",
           "mode": "schema",
           "name": "avsc",
           "opsPerSecond": {
-            "decode": 22860.28,
-            "encode": 23375.96,
-            "roundTrip": 11556.82
+            "decode": 21695.27,
+            "encode": 22716.95,
+            "roundTrip": 11221.46
           },
           "roundTrip": {
-            "maxMs": 0.095452,
-            "medianMs": 0.086529,
-            "minMs": 0.084375,
-            "p95Ms": 0.095452
+            "maxMs": 0.098533,
+            "medianMs": 0.089115,
+            "minMs": 0.08529,
+            "p95Ms": 0.098533
           },
           "status": "ok"
         },
         {
           "bytes": 45372,
           "decode": {
-            "maxMs": 0.273518,
-            "medianMs": 0.262869,
-            "minMs": 0.259221,
-            "p95Ms": 0.273518
+            "maxMs": 0.310353,
+            "medianMs": 0.284966,
+            "minMs": 0.267689,
+            "p95Ms": 0.310353
           },
           "encode": {
-            "maxMs": 0.262388,
-            "medianMs": 0.25726,
-            "minMs": 0.2439,
-            "p95Ms": 0.262388
+            "maxMs": 0.281697,
+            "medianMs": 0.258496,
+            "minMs": 0.244516,
+            "p95Ms": 0.281697
           },
           "format": "Protocol Buffers Struct",
           "mode": "document",
           "name": "protobufjs",
           "opsPerSecond": {
-            "decode": 3804.18,
-            "encode": 3887.12,
-            "roundTrip": 1922.6
+            "decode": 3509.19,
+            "encode": 3868.53,
+            "roundTrip": 1838.54
           },
           "roundTrip": {
-            "maxMs": 0.534924,
-            "medianMs": 0.520129,
-            "minMs": 0.503121,
-            "p95Ms": 0.534924
+            "maxMs": 0.59205,
+            "medianMs": 0.543911,
+            "minMs": 0.512205,
+            "p95Ms": 0.59205
           },
           "status": "ok"
         },
         {
           "bytes": 45372,
           "decode": {
-            "maxMs": 1.207756,
-            "medianMs": 1.186536,
-            "minMs": 1.168865,
-            "p95Ms": 1.207756
+            "maxMs": 1.200451,
+            "medianMs": 1.190979,
+            "minMs": 1.147509,
+            "p95Ms": 1.200451
           },
           "encode": {
-            "maxMs": 1.09737,
-            "medianMs": 1.076894,
-            "minMs": 1.039264,
-            "p95Ms": 1.09737
+            "maxMs": 1.101622,
+            "medianMs": 1.085644,
+            "minMs": 1.056271,
+            "p95Ms": 1.101622
           },
           "format": "Protocol Buffers Struct",
           "mode": "document",
           "name": "@bufbuild/protobuf",
           "opsPerSecond": {
-            "decode": 842.79,
-            "encode": 928.6,
-            "roundTrip": 442.44
+            "decode": 839.65,
+            "encode": 921.11,
+            "roundTrip": 438.89
           },
           "roundTrip": {
-            "maxMs": 2.293305,
-            "medianMs": 2.260202,
-            "minMs": 2.226192,
-            "p95Ms": 2.293305
+            "maxMs": 2.292601,
+            "medianMs": 2.278481,
+            "minMs": 2.226534,
+            "p95Ms": 2.292601
           },
           "status": "ok"
         },
         {
           "bytes": 31417,
           "decode": {
-            "maxMs": 0.042795,
-            "medianMs": 0.040857,
-            "minMs": 0.039735,
-            "p95Ms": 0.042795
+            "maxMs": 0.04803,
+            "medianMs": 0.040982,
+            "minMs": 0.039943,
+            "p95Ms": 0.04803
           },
           "encode": {
-            "maxMs": 0.080975,
-            "medianMs": 0.076584,
-            "minMs": 0.075012,
-            "p95Ms": 0.080975
+            "maxMs": 0.079873,
+            "medianMs": 0.077446,
+            "minMs": 0.07655,
+            "p95Ms": 0.079873
           },
           "format": "V8 serialized value",
           "mode": "runtime",
           "name": "v8",
           "opsPerSecond": {
-            "decode": 24475.61,
-            "encode": 13057.56,
-            "roundTrip": 8552.13
+            "decode": 24400.96,
+            "encode": 12912.22,
+            "roundTrip": 8298.62
           },
           "roundTrip": {
-            "maxMs": 0.12377,
-            "medianMs": 0.11693,
-            "minMs": 0.115868,
-            "p95Ms": 0.12377
+            "maxMs": 0.124846,
+            "medianMs": 0.120502,
+            "minMs": 0.116493,
+            "p95Ms": 0.124846
           },
           "status": "ok"
         },
         {
           "bytes": 21275,
           "decode": {
-            "maxMs": 0.300002,
-            "medianMs": 0.288461,
-            "minMs": 0.27349,
-            "p95Ms": 0.300002
+            "maxMs": 0.29658,
+            "medianMs": 0.290216,
+            "minMs": 0.284269,
+            "p95Ms": 0.29658
           },
           "encode": {
-            "maxMs": 0.318787,
-            "medianMs": 0.313868,
-            "minMs": 0.295386,
-            "p95Ms": 0.318787
+            "maxMs": 0.317261,
+            "medianMs": 0.305963,
+            "minMs": 0.295206,
+            "p95Ms": 0.317261
           },
           "format": "FlexBuffers",
           "mode": "document",
           "name": "flatbuffers-flexbuffers",
           "note": "Uses the FlatBuffers package's FlexBuffers object encoder.",
           "opsPerSecond": {
-            "decode": 3466.67,
-            "encode": 3186.05,
-            "roundTrip": 1679.72
+            "decode": 3445.71,
+            "encode": 3268.37,
+            "roundTrip": 1681.63
           },
           "roundTrip": {
-            "maxMs": 0.617081,
-            "medianMs": 0.595337,
-            "minMs": 0.582751,
-            "p95Ms": 0.617081
+            "maxMs": 0.61048,
+            "medianMs": 0.594661,
+            "minMs": 0.583713,
+            "p95Ms": 0.61048
           },
           "status": "ok"
         },
         {
           "bytes": 42103,
           "decode": {
-            "maxMs": 0.288338,
-            "medianMs": 0.221523,
-            "minMs": 0.216375,
-            "p95Ms": 0.288338
+            "maxMs": 0.292234,
+            "medianMs": 0.216801,
+            "minMs": 0.212768,
+            "p95Ms": 0.292234
           },
           "encode": {
-            "maxMs": 0.131207,
-            "medianMs": 0.093377,
-            "minMs": 0.091389,
-            "p95Ms": 0.131207
+            "maxMs": 0.131235,
+            "medianMs": 0.095455,
+            "minMs": 0.093452,
+            "p95Ms": 0.131235
           },
           "format": "BSON",
           "mode": "document",
           "name": "bson",
           "opsPerSecond": {
-            "decode": 4514.2,
-            "encode": 10709.28,
-            "roundTrip": 3191.53
+            "decode": 4612.52,
+            "encode": 10476.14,
+            "roundTrip": 3219.93
           },
           "roundTrip": {
-            "maxMs": 0.419544,
-            "medianMs": 0.313329,
-            "minMs": 0.30919,
-            "p95Ms": 0.419544
+            "maxMs": 0.42347,
+            "medianMs": 0.310566,
+            "minMs": 0.307867,
+            "p95Ms": 0.42347
           },
           "status": "ok"
         }
@@ -751,362 +875,424 @@
         {
           "bytes": 12018,
           "decode": {
-            "maxMs": 0.070774,
-            "medianMs": 0.032193,
-            "minMs": 0.030751,
-            "p95Ms": 0.070774
+            "maxMs": 0.044378,
+            "medianMs": 0.028232,
+            "minMs": 0.020154,
+            "p95Ms": 0.044378
           },
           "encode": {
-            "maxMs": 0.032405,
-            "medianMs": 0.022166,
-            "minMs": 0.020554,
-            "p95Ms": 0.032405
+            "maxMs": 0.02302,
+            "medianMs": 0.020476,
+            "minMs": 0.019198,
+            "p95Ms": 0.02302
           },
           "format": "codec binary",
           "mode": "schema",
           "name": "codec",
           "opsPerSecond": {
-            "decode": 31062.65,
-            "encode": 45114.14,
-            "roundTrip": 17530.94
+            "decode": 35420.8,
+            "encode": 48837.66,
+            "roundTrip": 20814.69
           },
           "roundTrip": {
-            "maxMs": 0.09294,
-            "medianMs": 0.057042,
-            "minMs": 0.051305,
-            "p95Ms": 0.09294
+            "maxMs": 0.067398,
+            "medianMs": 0.048043,
+            "minMs": 0.039352,
+            "p95Ms": 0.067398
           },
           "status": "ok"
         },
         {
           "bytes": 12018,
           "decode": {
-            "maxMs": 0.03294,
-            "medianMs": 0.030692,
-            "minMs": 0.029508,
-            "p95Ms": 0.03294
+            "maxMs": 0.027842,
+            "medianMs": 0.021817,
+            "minMs": 0.019627,
+            "p95Ms": 0.027842
           },
           "encode": {
-            "maxMs": 0.028627,
-            "medianMs": 0.020742,
-            "minMs": 0.020202,
-            "p95Ms": 0.028627
+            "maxMs": 0.054729,
+            "medianMs": 0.023128,
+            "minMs": 0.020885,
+            "p95Ms": 0.054729
           },
           "format": "codec binary",
           "mode": "schema",
           "name": "codec-view",
           "note": "Uses encodeView(), so the encoded value is a view into codec's internal encoder buffer.",
           "opsPerSecond": {
-            "decode": 32581.78,
-            "encode": 48211.36,
-            "roundTrip": 19442.39
+            "decode": 45835.82,
+            "encode": 43237.63,
+            "roundTrip": 22084.81
           },
           "roundTrip": {
-            "maxMs": 0.061294,
-            "medianMs": 0.051434,
-            "minMs": 0.049733,
-            "p95Ms": 0.061294
+            "maxMs": 0.07674,
+            "medianMs": 0.04528,
+            "minMs": 0.040775,
+            "p95Ms": 0.07674
           },
           "status": "ok"
         },
         {
           "bytes": 25656,
           "decode": {
-            "maxMs": 0.057022,
-            "medianMs": 0.052729,
-            "minMs": 0.049111,
-            "p95Ms": 0.057022
+            "maxMs": 0.054789,
+            "medianMs": 0.051873,
+            "minMs": 0.050623,
+            "p95Ms": 0.054789
           },
           "encode": {
-            "maxMs": 0.025895,
-            "medianMs": 0.024507,
-            "minMs": 0.023542,
-            "p95Ms": 0.025895
+            "maxMs": 0.024655,
+            "medianMs": 0.023966,
+            "minMs": 0.023587,
+            "p95Ms": 0.024655
           },
           "format": "JSON text",
           "mode": "document",
           "name": "json",
           "opsPerSecond": {
-            "decode": 18964.9,
-            "encode": 40804.67,
-            "roundTrip": 13026.09
+            "decode": 19277.85,
+            "encode": 41725.78,
+            "roundTrip": 13130.42
           },
           "roundTrip": {
-            "maxMs": 0.082017,
-            "medianMs": 0.076769,
-            "minMs": 0.072653,
-            "p95Ms": 0.082017
+            "maxMs": 0.078765,
+            "medianMs": 0.076159,
+            "minMs": 0.075278,
+            "p95Ms": 0.078765
+          },
+          "status": "ok"
+        },
+        {
+          "bytes": 13439,
+          "decode": {
+            "maxMs": 0.104527,
+            "medianMs": 0.100855,
+            "minMs": 0.090404,
+            "p95Ms": 0.104527
+          },
+          "encode": {
+            "maxMs": 0.464325,
+            "medianMs": 0.462886,
+            "minMs": 0.461605,
+            "p95Ms": 0.464325
+          },
+          "format": "Bunker",
+          "mode": "document",
+          "name": "bunker",
+          "note": "Uses bunker(value), so Bunker discovers and embeds the schema on each encode.",
+          "opsPerSecond": {
+            "decode": 9915.22,
+            "encode": 2160.36,
+            "roundTrip": 1776.26
+          },
+          "roundTrip": {
+            "maxMs": 0.567761,
+            "medianMs": 0.56298,
+            "minMs": 0.553754,
+            "p95Ms": 0.567761
+          },
+          "status": "ok"
+        },
+        {
+          "bytes": 13435,
+          "decode": {
+            "maxMs": 0.108468,
+            "medianMs": 0.097,
+            "minMs": 0.093956,
+            "p95Ms": 0.108468
+          },
+          "encode": {
+            "maxMs": 0.401817,
+            "medianMs": 0.388006,
+            "minMs": 0.385921,
+            "p95Ms": 0.401817
+          },
+          "format": "Bunker",
+          "mode": "schema",
+          "name": "bunker-schema",
+          "note": "Passes an explicit schema to bunker(value, schema), so Bunker does not discover the schema during encode.",
+          "opsPerSecond": {
+            "decode": 10309.28,
+            "encode": 2577.28,
+            "roundTrip": 2022.7
+          },
+          "roundTrip": {
+            "maxMs": 0.498182,
+            "medianMs": 0.494389,
+            "minMs": 0.481962,
+            "p95Ms": 0.498182
           },
           "status": "ok"
         },
         {
           "bytes": 20942,
           "decode": {
-            "maxMs": 0.086425,
-            "medianMs": 0.079405,
-            "minMs": 0.076258,
-            "p95Ms": 0.086425
+            "maxMs": 0.087579,
+            "medianMs": 0.079077,
+            "minMs": 0.076266,
+            "p95Ms": 0.087579
           },
           "encode": {
-            "maxMs": 0.078032,
-            "medianMs": 0.038899,
-            "minMs": 0.037122,
-            "p95Ms": 0.078032
+            "maxMs": 0.07701,
+            "medianMs": 0.038195,
+            "minMs": 0.036591,
+            "p95Ms": 0.07701
           },
           "format": "MessagePack",
           "mode": "document",
           "name": "msgpackr",
           "opsPerSecond": {
-            "decode": 12593.67,
-            "encode": 25707.6,
-            "roundTrip": 8069.98
+            "decode": 12645.9,
+            "encode": 26181.44,
+            "roundTrip": 7950.83
           },
           "roundTrip": {
-            "maxMs": 0.162663,
-            "medianMs": 0.123916,
-            "minMs": 0.114983,
-            "p95Ms": 0.162663
+            "maxMs": 0.15891,
+            "medianMs": 0.125773,
+            "minMs": 0.114381,
+            "p95Ms": 0.15891
           },
           "status": "ok"
         },
         {
           "bytes": 20522,
           "decode": {
-            "maxMs": 0.182049,
-            "medianMs": 0.168145,
-            "minMs": 0.15223,
-            "p95Ms": 0.182049
+            "maxMs": 0.18542,
+            "medianMs": 0.166724,
+            "minMs": 0.152372,
+            "p95Ms": 0.18542
           },
           "encode": {
-            "maxMs": 0.080263,
-            "medianMs": 0.068765,
-            "minMs": 0.06795,
-            "p95Ms": 0.080263
+            "maxMs": 0.08077,
+            "medianMs": 0.068632,
+            "minMs": 0.066346,
+            "p95Ms": 0.08077
           },
           "format": "MessagePack",
           "mode": "document",
           "name": "@msgpack/msgpack",
           "opsPerSecond": {
-            "decode": 5947.25,
-            "encode": 14542.28,
-            "roundTrip": 4232.39
+            "decode": 5997.94,
+            "encode": 14570.46,
+            "roundTrip": 4252.06
           },
           "roundTrip": {
-            "maxMs": 0.259582,
-            "medianMs": 0.236273,
-            "minMs": 0.220179,
-            "p95Ms": 0.259582
+            "maxMs": 0.262902,
+            "medianMs": 0.23518,
+            "minMs": 0.218718,
+            "p95Ms": 0.262902
           },
           "status": "ok"
         },
         {
           "bytes": 21042,
           "decode": {
-            "maxMs": 0.103155,
-            "medianMs": 0.084848,
-            "minMs": 0.081695,
-            "p95Ms": 0.103155
+            "maxMs": 0.156245,
+            "medianMs": 0.084881,
+            "minMs": 0.083255,
+            "p95Ms": 0.156245
           },
           "encode": {
-            "maxMs": 0.094302,
-            "medianMs": 0.060473,
-            "minMs": 0.035861,
-            "p95Ms": 0.094302
+            "maxMs": 0.091543,
+            "medianMs": 0.058205,
+            "minMs": 0.035817,
+            "p95Ms": 0.091543
           },
           "format": "CBOR",
           "mode": "document",
           "name": "cbor-x",
           "opsPerSecond": {
-            "decode": 11785.78,
-            "encode": 16536.31,
-            "roundTrip": 6869.36
+            "decode": 11781.2,
+            "encode": 17180.65,
+            "roundTrip": 6984.65
           },
           "roundTrip": {
-            "maxMs": 0.197458,
-            "medianMs": 0.145574,
-            "minMs": 0.117556,
-            "p95Ms": 0.197458
+            "maxMs": 0.247789,
+            "medianMs": 0.143171,
+            "minMs": 0.119072,
+            "p95Ms": 0.247789
           },
           "status": "ok"
         },
         {
           "bytes": 12072,
           "decode": {
-            "maxMs": 0.045739,
-            "medianMs": 0.044692,
-            "minMs": 0.03972,
-            "p95Ms": 0.045739
+            "maxMs": 0.046759,
+            "medianMs": 0.043424,
+            "minMs": 0.040688,
+            "p95Ms": 0.046759
           },
           "encode": {
-            "maxMs": 0.038271,
-            "medianMs": 0.034773,
-            "minMs": 0.034349,
-            "p95Ms": 0.038271
+            "maxMs": 0.039009,
+            "medianMs": 0.036338,
+            "minMs": 0.035814,
+            "p95Ms": 0.039009
           },
           "format": "Avro",
           "mode": "schema",
           "name": "avsc",
           "opsPerSecond": {
-            "decode": 22375.37,
-            "encode": 28757.94,
-            "roundTrip": 12584.16
+            "decode": 23028.74,
+            "encode": 27519.4,
+            "roundTrip": 12571.18
           },
           "roundTrip": {
-            "maxMs": 0.08401,
-            "medianMs": 0.079465,
-            "minMs": 0.074388,
-            "p95Ms": 0.08401
+            "maxMs": 0.085768,
+            "medianMs": 0.079547,
+            "minMs": 0.07713,
+            "p95Ms": 0.085768
           },
           "status": "ok"
         },
         {
           "bytes": 32851,
           "decode": {
-            "maxMs": 0.234556,
-            "medianMs": 0.217755,
-            "minMs": 0.217533,
-            "p95Ms": 0.234556
+            "maxMs": 0.240666,
+            "medianMs": 0.223202,
+            "minMs": 0.216933,
+            "p95Ms": 0.240666
           },
           "encode": {
-            "maxMs": 0.232483,
-            "medianMs": 0.216527,
-            "minMs": 0.197508,
-            "p95Ms": 0.232483
+            "maxMs": 0.228731,
+            "medianMs": 0.220164,
+            "minMs": 0.203761,
+            "p95Ms": 0.228731
           },
           "format": "Protocol Buffers Struct",
           "mode": "document",
           "name": "protobufjs",
           "opsPerSecond": {
-            "decode": 4592.32,
-            "encode": 4618.36,
-            "roundTrip": 2295.47
+            "decode": 4480.25,
+            "encode": 4542.07,
+            "roundTrip": 2244.24
           },
           "roundTrip": {
-            "maxMs": 0.450239,
-            "medianMs": 0.43564,
-            "minMs": 0.423614,
-            "p95Ms": 0.450239
+            "maxMs": 0.455257,
+            "medianMs": 0.445586,
+            "minMs": 0.426429,
+            "p95Ms": 0.455257
           },
           "status": "ok"
         },
         {
           "bytes": 32851,
           "decode": {
-            "maxMs": 0.910829,
-            "medianMs": 0.902957,
-            "minMs": 0.88713,
-            "p95Ms": 0.910829
+            "maxMs": 0.911377,
+            "medianMs": 0.897246,
+            "minMs": 0.885586,
+            "p95Ms": 0.911377
           },
           "encode": {
-            "maxMs": 0.898586,
-            "medianMs": 0.884844,
-            "minMs": 0.870687,
-            "p95Ms": 0.898586
+            "maxMs": 0.907161,
+            "medianMs": 0.892195,
+            "minMs": 0.869315,
+            "p95Ms": 0.907161
           },
           "format": "Protocol Buffers Struct",
           "mode": "document",
           "name": "@bufbuild/protobuf",
           "opsPerSecond": {
-            "decode": 1107.47,
-            "encode": 1130.14,
-            "roundTrip": 559.32
+            "decode": 1114.52,
+            "encode": 1120.83,
+            "roundTrip": 561.27
           },
           "roundTrip": {
-            "maxMs": 1.796767,
-            "medianMs": 1.787889,
-            "minMs": 1.767567,
-            "p95Ms": 1.796767
+            "maxMs": 1.809686,
+            "medianMs": 1.78168,
+            "minMs": 1.755758,
+            "p95Ms": 1.809686
           },
           "status": "ok"
         },
         {
           "bytes": 24261,
           "decode": {
-            "maxMs": 0.040965,
-            "medianMs": 0.038408,
-            "minMs": 0.037753,
-            "p95Ms": 0.040965
+            "maxMs": 0.048744,
+            "medianMs": 0.038391,
+            "minMs": 0.03765,
+            "p95Ms": 0.048744
           },
           "encode": {
-            "maxMs": 0.07305,
-            "medianMs": 0.069746,
-            "minMs": 0.06902,
-            "p95Ms": 0.07305
+            "maxMs": 0.064467,
+            "medianMs": 0.063202,
+            "minMs": 0.061671,
+            "p95Ms": 0.064467
           },
           "format": "V8 serialized value",
           "mode": "runtime",
           "name": "v8",
           "opsPerSecond": {
-            "decode": 26036.24,
-            "encode": 14337.74,
-            "roundTrip": 9230.63
+            "decode": 26047.77,
+            "encode": 15822.28,
+            "roundTrip": 9872.35
           },
           "roundTrip": {
-            "maxMs": 0.114015,
-            "medianMs": 0.108335,
-            "minMs": 0.106773,
-            "p95Ms": 0.114015
+            "maxMs": 0.113211,
+            "medianMs": 0.101293,
+            "minMs": 0.100062,
+            "p95Ms": 0.113211
           },
           "status": "ok"
         },
         {
           "bytes": 15875,
           "decode": {
-            "maxMs": 0.260216,
-            "medianMs": 0.222744,
-            "minMs": 0.222008,
-            "p95Ms": 0.260216
+            "maxMs": 0.292983,
+            "medianMs": 0.244433,
+            "minMs": 0.218627,
+            "p95Ms": 0.292983
           },
           "encode": {
-            "maxMs": 0.362445,
-            "medianMs": 0.332368,
-            "minMs": 0.314281,
-            "p95Ms": 0.362445
+            "maxMs": 0.349836,
+            "medianMs": 0.327649,
+            "minMs": 0.300349,
+            "p95Ms": 0.349836
           },
           "format": "FlexBuffers",
           "mode": "document",
           "name": "flatbuffers-flexbuffers",
           "note": "Uses the FlatBuffers package's FlexBuffers object encoder.",
           "opsPerSecond": {
-            "decode": 4489.46,
-            "encode": 3008.71,
-            "roundTrip": 1785.8
+            "decode": 4091.1,
+            "encode": 3052.05,
+            "roundTrip": 1792.11
           },
           "roundTrip": {
-            "maxMs": 0.612658,
-            "medianMs": 0.559972,
-            "minMs": 0.555022,
-            "p95Ms": 0.612658
+            "maxMs": 0.613985,
+            "medianMs": 0.558003,
+            "minMs": 0.546276,
+            "p95Ms": 0.613985
           },
           "status": "ok"
         },
         {
           "bytes": 27660,
           "decode": {
-            "maxMs": 0.194937,
-            "medianMs": 0.185829,
-            "minMs": 0.17241,
-            "p95Ms": 0.194937
+            "maxMs": 0.195227,
+            "medianMs": 0.189362,
+            "minMs": 0.17293,
+            "p95Ms": 0.195227
           },
           "encode": {
-            "maxMs": 0.101726,
-            "medianMs": 0.084355,
-            "minMs": 0.081189,
-            "p95Ms": 0.101726
+            "maxMs": 0.102573,
+            "medianMs": 0.083145,
+            "minMs": 0.08152,
+            "p95Ms": 0.102573
           },
           "format": "BSON",
           "mode": "document",
           "name": "bson",
           "opsPerSecond": {
-            "decode": 5381.29,
-            "encode": 11854.66,
-            "roundTrip": 3704.97
+            "decode": 5280.89,
+            "encode": 12027.18,
+            "roundTrip": 3672.45
           },
           "roundTrip": {
-            "maxMs": 0.296663,
-            "medianMs": 0.269908,
-            "minMs": 0.253598,
-            "p95Ms": 0.296663
+            "maxMs": 0.296467,
+            "medianMs": 0.272298,
+            "minMs": 0.25445,
+            "p95Ms": 0.296467
           },
           "status": "ok"
         }
@@ -1114,7 +1300,7 @@
       "warmupIterations": 5
     }
   ],
-  "generatedAt": "2026-06-26T14:35:56.420Z",
+  "generatedAt": "2026-06-26T15:07:14.283Z",
   "runtime": {
     "bun": "1.3.14",
     "node": "24.3.0"
@@ -1138,6 +1324,20 @@
       "format": "JSON text",
       "mode": "document",
       "name": "json",
+      "status": "available"
+    },
+    {
+      "format": "Bunker",
+      "mode": "document",
+      "name": "bunker",
+      "note": "Uses bunker(value), so Bunker discovers and embeds the schema on each encode.",
+      "status": "available"
+    },
+    {
+      "format": "Bunker",
+      "mode": "schema",
+      "name": "bunker-schema",
+      "note": "Passes an explicit schema to bunker(value, schema), so Bunker does not discover the schema during encode.",
       "status": "available"
     },
     {

@@ -1,1 +1,2 @@
-Read ./README.md
+- Read ./README.md
+- When running benchmarks, do not use "--table" parameter (it's intended for humans)
