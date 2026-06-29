@@ -36,7 +36,6 @@ bun run benchmark --serializer codec --serializer avsc --table
 Available serializers:
 
 - `codec`
-- `codec-view`
 - `json`
 - `bunker`
 - `bunker-schema`

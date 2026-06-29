@@ -104,7 +104,7 @@ describe("signature codec", () => {
 		expect(() => bigint(0)).toThrow("bigint maxBytes must be a positive safe integer");
 	});
 
-	test("encode returns an exact copy and encodeView returns a decodable view", () => {
+	test("encode returns an exact copy", () => {
 		const codec = createCodec("string");
 		const value = "a".repeat(200);
 
@@ -114,9 +114,6 @@ describe("signature codec", () => {
 		const overwritten = codec.encode("b".repeat(240));
 		expect(codec.decode(encoded)).toBe(value);
 		expect(codec.decode(overwritten)).toBe("b".repeat(240));
-
-		const encodedView = codec.encodeView(value);
-		expect(codec.decode(encodedView)).toBe(value);
 	});
 
 	test("string primitive supports non-ASCII values", () => {
@@ -124,7 +121,6 @@ describe("signature codec", () => {
 		const value = "hello café 🚀";
 
 		expect(codec.decode(codec.encode(value))).toBe(value);
-		expect(codec.decode(codec.encodeView(value))).toBe(value);
 	});
 
 	test("varuint boundary values", () => {

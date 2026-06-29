@@ -55,10 +55,6 @@ export function toUint8Array(encoder: Encoder): Uint8Array<ArrayBuffer> {
 	return encoder.buffer.slice(0, encoder.pos);
 }
 
-export function toUint8ArrayView(encoder: Encoder): Uint8Array<ArrayBuffer> {
-	return encoder.buffer.subarray(0, encoder.pos);
-}
-
 export function ensureCapacity(encoder: Encoder, byteLength: number): void {
 	const required = encoder.pos + byteLength;
 	if (required <= encoder.buffer.length) {

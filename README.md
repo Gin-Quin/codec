@@ -115,19 +115,15 @@ for (const value of values) {
 }
 ```
 
-Use `encode` when you need an exact-sized copy. It reuses the codec's encoder
-buffer on repeated calls, then returns an exact-sized `Uint8Array` copy. Use
-`encodeView` when a subarray view is acceptable and you want to avoid the final
-copy.
+`encode` reuses the codec's encoder buffer on repeated calls, then returns a
+`Uint8Array` with an exact-sized backing `ArrayBuffer`.
 
 ```ts
 const copied = codec.encode(value);
-const view = codec.encodeView(value);
 ```
 
-For `encodeView`, the codec remembers the previous encoded size and uses it as
-the next encoder's initial buffer size, which helps repeated similarly-sized
-payloads.
+The returned bytes are safe to store, pass to APIs, or access through
+`copied.buffer` without worrying about extra unused capacity.
 
 ## Schema Reference
 
@@ -451,13 +447,11 @@ Compiles a schema and returns a `Codec<T>`.
 ```ts
 interface Codec<T> {
 	encode(value: T): Uint8Array<ArrayBuffer>;
-	encodeView(value: T): Uint8Array<ArrayBuffer>;
 	decode(buffer: Uint8Array | Decoder): T;
 }
 ```
 
 - `encode(value)` returns an exact-sized `Uint8Array` copy.
-- `encodeView(value)` returns a view into the encoder buffer.
 - `decode(buffer)` accepts a `Uint8Array` or an existing `Decoder`.
 
 ### Schema Builders
@@ -498,7 +492,6 @@ import {
 	readVarUint,
 	readVarUint8Array,
 	toUint8Array,
-	toUint8ArrayView,
 	writeVarInt,
 	writeVarString,
 	writeVarUint,
@@ -530,7 +523,6 @@ Results for encoding and decoding speed for a medium JSON object:
 | Serializer                | Bytes | Encode us | Decode us | Round trip us |
 | ------------------------- | ----: | --------: | --------: | ------------: |
 | `codec`                   |   803 |      0.83 |      1.12 |          1.95 |
-| `codec-view`              |   803 |      1.15 |      0.96 |          2.09 |
 | `json`                    |  1082 |      0.83 |      1.36 |          2.16 |
 | `avsc`                    |   806 |      1.09 |      3.17 |          4.37 |
 | `msgpackr`                |   949 |      1.26 |      3.39 |          4.65 |
@@ -590,7 +582,6 @@ bun run benchmark --serializer codec --serializer avsc --table
 Available serializers:
 
 - `codec`
-- `codec-view`
 - `json`
 - `bunker`
 - `bunker-schema`

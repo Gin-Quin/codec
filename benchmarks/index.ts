@@ -868,19 +868,6 @@ async function createSerializers(): Promise<{
 			},
 		},
 		{
-			format: "codec binary",
-			mode: "schema",
-			name: "codec-view",
-			note: "Uses encodeView(), so the encoded value is a view into codec's internal encoder buffer.",
-			setup: (benchmarkCase) => {
-				const codec = createCodec(benchmarkCase.codecSchema);
-				return {
-					decode: (encoded) => codec.decode(encoded as Uint8Array),
-					encode: (value) => codec.encodeView(value as never),
-				};
-			},
-		},
-		{
 			format: "JSON text",
 			mode: "document",
 			name: "json",

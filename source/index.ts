@@ -3,7 +3,6 @@ import {
 	createEncoder,
 	type Decoder,
 	toUint8Array,
-	toUint8ArrayView,
 } from "./binary";
 import { compileReader, compileWriter } from "./compiler";
 import type { InferType, Schema } from "./schema";
@@ -24,7 +23,6 @@ export {
 	readVarUint,
 	readVarUint8Array,
 	toUint8Array,
-	toUint8ArrayView,
 	writeDate,
 	writeFloat32,
 	writeFloat64,
@@ -53,7 +51,6 @@ export { array, bigint, map, object, optional, set, tuple, union } from "./schem
 
 export interface Codec<T> {
 	encode(value: T): Uint8Array<ArrayBuffer>;
-	encodeView(value: T): Uint8Array<ArrayBuffer>;
 	decode(buffer: Uint8Array | Decoder): T;
 }
 
@@ -62,7 +59,6 @@ export function createCodec<T extends Schema>(schema: T): Codec<InferType<T>> {
 	const read = compileReader(schema);
 	const encoder = createEncoder();
 	const decoder = createDecoder(new Uint8Array(0));
-	let nextViewEncoderSize: number | undefined;
 
 	function writeCopiedValue(value: InferType<T>) {
 		encoder.pos = 0;
@@ -70,19 +66,9 @@ export function createCodec<T extends Schema>(schema: T): Codec<InferType<T>> {
 		return encoder;
 	}
 
-	function writeViewValue(value: InferType<T>) {
-		const viewEncoder = createEncoder(nextViewEncoderSize);
-		write(viewEncoder, value);
-		nextViewEncoderSize = viewEncoder.pos;
-		return viewEncoder;
-	}
-
 	return {
 		encode: (value: InferType<T>): Uint8Array<ArrayBuffer> => {
 			return toUint8Array(writeCopiedValue(value));
-		},
-		encodeView: (value: InferType<T>): Uint8Array<ArrayBuffer> => {
-			return toUint8ArrayView(writeViewValue(value));
 		},
 		decode: (buffer: Uint8Array | Decoder): InferType<T> => {
 			if (!(buffer instanceof Uint8Array)) {
