@@ -3,15 +3,18 @@
 	"module": "source/index.ts",
 	"type": "module",
 	"private": true,
+	"main": "./source/index.ts",
 	"exports": {
 		"./*": "./source/*.ts"
 	},
 	"scripts": {
+		"test": "bun test",
 		"check": "bun biome check",
 		"benchmark": "bun ./benchmarks/index.ts",
 		"benchmark:save": "bun ./benchmarks/index.ts > ./benchmarks/benchmark-results.json",
 		"benchmark:generate-md": "bun ./benchmarks/generate-markdown.ts",
-		"benchmark:view": "bun ./benchmarks.html"
+		"benchmark:view": "bun ./benchmarks.html",
+		"deploy": "bun run test && bun x jsr publish"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.1",
