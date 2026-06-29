@@ -1,6 +1,6 @@
 {
 	"name": "@gin-quin/codec",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"license": "MIT",
 	"description": "Very fast and fully typed binary serializer with support for unions.",
 	"exports": {
