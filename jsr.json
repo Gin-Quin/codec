@@ -9,6 +9,7 @@
 	"publish": {
 		"include": [
 			"README.md",
+			"BENCHMARKS.md",
 			"source/binary.ts",
 			"source/compiler.ts",
 			"source/dynamic.ts",
