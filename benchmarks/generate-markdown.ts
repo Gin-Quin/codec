@@ -41,7 +41,6 @@ interface BenchmarkRow {
 	serializer: string;
 	sizeVsJson?: number;
 	status: BenchmarkStatus | "failed";
-	statusText: string;
 	vsJson?: number;
 }
 
@@ -102,7 +101,6 @@ function flattenCase(benchmarkCase: BenchmarkCase): FlattenedCase {
 			serializer: result.name,
 			sizeVsJson: result.bytes && jsonResult?.bytes ? result.bytes / jsonResult.bytes : undefined,
 			status: result.status,
-			statusText: result.error || result.reason || result.status,
 			vsJson:
 				result.roundTrip && jsonResult?.roundTrip
 					? result.roundTrip.medianMs / jsonResult.roundTrip.medianMs
@@ -148,10 +146,6 @@ function buildAverageCase(benchmarkCases: FlattenedCase[]): FlattenedCase {
 			roundTripUs: averageValue(rows, "roundTripUs"),
 			serializer,
 			status: failedRows.length === 0 ? "ok" : "failed",
-			statusText:
-				failedRows.length === 0
-					? `Averaged across ${rows.length} cases.`
-					: `${failedRows.length} of ${rows.length} cases did not complete.`,
 		};
 	});
 	const jsonRow = rows.find((row) => row.serializer === "json");
@@ -241,9 +235,8 @@ function renderTable(rows: BenchmarkRow[]): string {
 		`Decode ${MICROSECONDS}`,
 		`Round trip ${MICROSECONDS}`,
 		"Round trip vs JSON",
-		"Status",
 	];
-	const alignment = [":--", ":--", "--:", "--:", "--:", "--:", "--:", "--:", ":--"];
+	const alignment = [":--", ":--", "--:", "--:", "--:", "--:", "--:", "--:"];
 	const body = rows.map((row) =>
 		[
 			formatSerializer(row),
@@ -254,7 +247,6 @@ function renderTable(rows: BenchmarkRow[]): string {
 			formatMetric(row, "decodeUs", formatNumber),
 			formatMetric(row, "roundTripUs", formatNumber),
 			formatMetric(row, "vsJson", formatRatio),
-			row.statusText,
 		]
 			.map(escapeTableCell)
 			.join(" | "),
