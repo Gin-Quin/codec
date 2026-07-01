@@ -30,7 +30,9 @@ import type {
 	Schema,
 	SetSchema,
 	TupleSchema,
+	UnionDiscriminantType,
 	UnionSchema,
+	UntaggedUnionSchema,
 } from "./schema";
 
 /** Writes a value using a schema without precompiling a codec. */
@@ -80,6 +82,9 @@ export function writeSchema(schema: Schema, value: any, encoder: Encoder): void 
 			case "union":
 				writeUnion(schema, value, encoder);
 				break;
+			case "untaggedUnion":
+				writeUntaggedUnion(schema, value, encoder);
+				break;
 			case "map":
 				writeMap(schema, value, encoder);
 				break;
@@ -127,11 +132,15 @@ function writeOptional(
 }
 
 function writeUnion(
-	schema: UnionSchema<string, Record<string, Record<string, Schema>>>,
+	schema: UnionSchema<
+		UnionDiscriminantType,
+		Record<string | number, Record<string, Schema>>,
+		string
+	>,
 	value: any,
 	encoder: Encoder,
 ): void {
-	const discriminantValue = value[schema.discriminant];
+	const discriminantValue = value[schema.tagName];
 
 	writeSchema(schema.type, discriminantValue, encoder);
 
@@ -141,10 +150,24 @@ function writeUnion(
 	}
 
 	for (const [key, fieldSchema] of Object.entries(variantSchema)) {
-		if (key !== schema.discriminant) {
+		if (key !== schema.tagName) {
 			writeSchema(fieldSchema, value[key], encoder);
 		}
 	}
+}
+
+export function writeUntaggedUnion(
+	schema: UntaggedUnionSchema<readonly Schema[]>,
+	value: any,
+	encoder: Encoder,
+): void {
+	const variantIndex = findUntaggedUnionVariant(schema.variants, value);
+	if (variantIndex === -1) {
+		throw new Error("No matching union variant");
+	}
+
+	writeVarUint(encoder, variantIndex);
+	writeSchema(schema.variants[variantIndex]!, value, encoder);
 }
 
 function writeMap(schema: MapSchema<Schema>, value: any, encoder: Encoder): void {
@@ -193,6 +216,8 @@ export function readSchema(schema: Schema, decoder: Decoder): any {
 			return readOptional(schema, decoder);
 		case "union":
 			return readUnion(schema, decoder);
+		case "untaggedUnion":
+			return readUntaggedUnion(schema, decoder);
 		case "map":
 			return readMap(schema, decoder);
 		case "bigint":
@@ -250,7 +275,11 @@ function readOptional(schema: OptionalSchema<Schema>, decoder: Decoder): any | u
 }
 
 function readUnion(
-	schema: UnionSchema<string, Record<string, Record<string, Schema>>>,
+	schema: UnionSchema<
+		UnionDiscriminantType,
+		Record<string | number, Record<string, Schema>>,
+		string
+	>,
 	decoder: Decoder,
 ): any {
 	const discriminantValue = readPrimitive(schema.type, decoder);
@@ -261,16 +290,29 @@ function readUnion(
 	}
 
 	const result: any = {
-		[schema.discriminant]: discriminantValue,
+		[schema.tagName]: discriminantValue,
 	};
 
 	for (const [key, fieldSchema] of Object.entries(variantSchema)) {
-		if (key !== schema.discriminant) {
+		if (key !== schema.tagName) {
 			result[key] = readSchema(fieldSchema, decoder);
 		}
 	}
 
 	return result;
+}
+
+export function readUntaggedUnion(
+	schema: UntaggedUnionSchema<readonly Schema[]>,
+	decoder: Decoder,
+): any {
+	const variantIndex = readVarUint(decoder);
+	const variantSchema = schema.variants[variantIndex];
+	if (!variantSchema) {
+		throw new Error(`Unknown union variant: ${variantIndex}`);
+	}
+
+	return readSchema(variantSchema, decoder);
 }
 
 function readMap(schema: MapSchema<Schema>, decoder: Decoder): any {
@@ -302,4 +344,152 @@ function readTuple(schema: TupleSchema<Schema[]>, decoder: Decoder): any[] {
 		result[index] = readSchema(schema.elements[index]!, decoder);
 	}
 	return result;
+}
+
+function findUntaggedUnionVariant(variants: readonly Schema[], value: any): number {
+	for (let index = 0; index < variants.length; index++) {
+		if (matchesSchema(variants[index]!, value)) {
+			return index;
+		}
+	}
+
+	return -1;
+}
+
+function matchesSchema(schema: Schema, value: any): boolean {
+	if (typeof schema === "function") {
+		return matchesSchema(schema(), value);
+	}
+
+	if (typeof schema === "string") {
+		return matchesPrimitive(schema, value);
+	}
+
+	switch (schema._type) {
+		case "array":
+			if (!Array.isArray(value)) {
+				return false;
+			}
+
+			for (const element of value) {
+				if (!matchesSchema(schema.element, element)) {
+					return false;
+				}
+			}
+
+			return true;
+		case "object":
+			if (!isRecordValue(value)) {
+				return false;
+			}
+
+			for (const [key, fieldSchema] of Object.entries(schema.fields)) {
+				if (!matchesSchema(fieldSchema, value[key])) {
+					return false;
+				}
+			}
+
+			return true;
+		case "optional":
+			return value === undefined || matchesSchema(schema.schema, value);
+		case "union":
+			return matchesTaggedUnionSchema(schema, value);
+		case "untaggedUnion":
+			return findUntaggedUnionVariant(schema.variants, value) !== -1;
+		case "map":
+			if (!isRecordValue(value)) {
+				return false;
+			}
+
+			for (const element of Object.values(value)) {
+				if (!matchesSchema(schema.element, element)) {
+					return false;
+				}
+			}
+
+			return true;
+		case "bigint":
+			return typeof value === "bigint";
+		case "set":
+			if (!(value instanceof Set)) {
+				return false;
+			}
+
+			for (const element of value) {
+				if (!matchesSchema(schema.element, element)) {
+					return false;
+				}
+			}
+
+			return true;
+		case "tuple":
+			if (!Array.isArray(value) || value.length !== schema.elements.length) {
+				return false;
+			}
+
+			for (let index = 0; index < schema.elements.length; index++) {
+				if (!matchesSchema(schema.elements[index]!, value[index])) {
+					return false;
+				}
+			}
+
+			return true;
+	}
+}
+
+function matchesPrimitive(schema: PrimitiveType, value: any): boolean {
+	switch (schema) {
+		case "string":
+			return typeof value === "string";
+		case "int":
+			return Number.isSafeInteger(value);
+		case "uint":
+			return Number.isSafeInteger(value) && value >= 0;
+		case "uint8Array":
+			return value instanceof Uint8Array;
+		case "boolean":
+			return typeof value === "boolean";
+		case "date":
+			return value instanceof Date;
+		case "float32":
+		case "float64":
+			return typeof value === "number";
+	}
+}
+
+function matchesTaggedUnionSchema(
+	schema: UnionSchema<
+		UnionDiscriminantType,
+		Record<string | number, Record<string, Schema>>,
+		string
+	>,
+	value: any,
+): boolean {
+	if (!isRecordValue(value)) {
+		return false;
+	}
+
+	const variantSchema = schema.variants[value[schema.tagName]];
+	if (!variantSchema) {
+		return false;
+	}
+
+	for (const [key, fieldSchema] of Object.entries(variantSchema)) {
+		if (key !== schema.tagName && !matchesSchema(fieldSchema, value[key])) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+function isRecordValue(value: any): value is Record<string, any> {
+	return (
+		value !== null &&
+		typeof value === "object" &&
+		!Array.isArray(value) &&
+		!(value instanceof Date) &&
+		!(value instanceof Set) &&
+		!(value instanceof Uint8Array)
+	);
 }

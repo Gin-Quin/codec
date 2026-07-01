@@ -40,7 +40,10 @@ export type {
 	Schema,
 	SetSchema,
 	TupleSchema,
+	UnionDiscriminantType,
+	UnionOptions,
 	UnionSchema,
+	UntaggedUnionSchema,
 } from "./schema";
 export { array, bigint, map, object, optional, set, tuple, union } from "./schema";
 

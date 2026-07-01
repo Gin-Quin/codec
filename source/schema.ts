@@ -9,13 +9,28 @@ export type PrimitiveType =
 	| "float32"
 	| "float64";
 
+/** Primitive schemas that can encode a union variant discriminant. */
+export type UnionDiscriminantType = "string" | "int" | "uint";
+
+type UnionVariantMap = Record<string | number, Record<string, Schema>>;
+
+type NumericUnionVariantKey = number | `${number}`;
+
+type UnionVariantKeyCheck<
+	DiscriminantType extends UnionDiscriminantType,
+	Variants extends UnionVariantMap,
+> = DiscriminantType extends "string"
+	? unknown
+	: Record<Exclude<keyof Variants, NumericUnionVariantKey>, never>;
+
 /** A schema value that describes how a value is encoded and decoded. */
 export type Schema =
 	| PrimitiveType
 	| ArraySchema<Schema>
 	| ObjectSchema<Record<string, Schema>>
 	| OptionalSchema<Schema>
-	| UnionSchema<string, Record<string, Record<string, Schema>>>
+	| UnionSchema<UnionDiscriminantType, UnionVariantMap, string>
+	| UntaggedUnionSchema<readonly Schema[]>
 	| MapSchema<Schema>
 	| BigIntSchema
 	| SetSchema<Schema>
@@ -25,7 +40,8 @@ export type Schema =
 			| ArraySchema<Schema>
 			| ObjectSchema<Record<string, Schema>>
 			| OptionalSchema<Schema>
-			| UnionSchema<string, Record<string, Record<string, Schema>>>
+			| UnionSchema<UnionDiscriminantType, UnionVariantMap, string>
+			| UntaggedUnionSchema<readonly Schema[]>
 			| MapSchema<Schema>
 			| BigIntSchema
 			| SetSchema<Schema>
@@ -75,12 +91,30 @@ export interface TupleSchema<Elements extends Schema[]> {
 
 /** Schema for a discriminated union encoded by a string, int, or uint variant tag. */
 export interface UnionSchema<
-	Discriminant extends string,
-	Variants extends Record<string, Record<string, Schema>>,
+	DiscriminantType extends UnionDiscriminantType,
+	Variants extends UnionVariantMap,
+	TagName extends string = "type",
 > {
 	_type: "union";
-	discriminant: Discriminant;
-	type: "string" | "int" | "uint";
+	tagName: TagName;
+	type: DiscriminantType;
+	variants: Variants & UnionVariantKeyCheck<DiscriminantType, Variants>;
+}
+
+/** Options for a tagged union schema with a configurable tag field name. */
+export interface UnionOptions<
+	TagName extends string,
+	DiscriminantType extends UnionDiscriminantType,
+	Variants extends UnionVariantMap,
+> {
+	tagName: TagName;
+	tagType: DiscriminantType;
+	variants: Variants & UnionVariantKeyCheck<DiscriminantType, Variants>;
+}
+
+/** Schema for an untagged union encoded by a uint variant index. */
+export interface UntaggedUnionSchema<Variants extends readonly Schema[]> {
+	_type: "untaggedUnion";
 	variants: Variants;
 }
 
@@ -124,16 +158,63 @@ export function optional<Type extends Schema>(schema: Type): OptionalSchema<Type
 	return { _type: "optional", schema };
 }
 
-/** Creates a discriminated union schema. */
+/** Creates a tagged union schema. */
 export function union<
-	Discriminant extends string,
-	Variants extends Record<string, Record<string, Schema>>,
+	const TagName extends string,
+	const DiscriminantType extends UnionDiscriminantType,
+	const Variants extends UnionVariantMap,
 >(
-	discriminant: Discriminant,
-	type: "string" | "int" | "uint",
+	options: UnionOptions<TagName, DiscriminantType, Variants>,
+): UnionSchema<DiscriminantType, Variants, TagName>;
+
+/** Creates a tagged union schema with a `type` tag field. */
+export function union<
+	const DiscriminantType extends UnionDiscriminantType,
+	const Variants extends UnionVariantMap,
+>(
+	discriminantType: DiscriminantType,
+	variants: Variants & UnionVariantKeyCheck<DiscriminantType, Variants>,
+): UnionSchema<DiscriminantType, Variants>;
+
+/** Creates an untagged union schema. */
+export function union<const Variants extends readonly Schema[]>(
 	variants: Variants,
-): UnionSchema<Discriminant, Variants> {
-	return { _type: "union", discriminant, type, variants };
+): UntaggedUnionSchema<Variants>;
+
+export function union(
+	discriminantTypeOrOptionsOrVariants:
+		| UnionDiscriminantType
+		| UnionOptions<string, UnionDiscriminantType, UnionVariantMap>
+		| readonly Schema[],
+	variants?: UnionVariantMap,
+):
+	| UnionSchema<UnionDiscriminantType, UnionVariantMap, string>
+	| UntaggedUnionSchema<readonly Schema[]> {
+	if (Array.isArray(discriminantTypeOrOptionsOrVariants)) {
+		return { _type: "untaggedUnion", variants: discriminantTypeOrOptionsOrVariants };
+	}
+
+	if (typeof discriminantTypeOrOptionsOrVariants === "string") {
+		return {
+			_type: "union",
+			tagName: "type",
+			type: discriminantTypeOrOptionsOrVariants,
+			variants: variants ?? {},
+		};
+	}
+
+	const options = discriminantTypeOrOptionsOrVariants as UnionOptions<
+		string,
+		UnionDiscriminantType,
+		UnionVariantMap
+	>;
+
+	return {
+		_type: "union",
+		tagName: options.tagName,
+		type: options.tagType,
+		variants: options.variants,
+	};
 }
 
 /** Infers the TypeScript value type represented by a schema. */
@@ -146,7 +227,7 @@ export type InferType<T extends Schema> = [T] extends [() => infer S]
 		: [T] extends [ArraySchema<infer E>]
 			? Array<InferType<E>>
 			: [T] extends [ObjectSchema<infer Properties>]
-				? InferObjectType<Properties>
+				? ExpandObject<InferObjectType<Properties>>
 				: [T] extends [OptionalSchema<infer Type>]
 					? InferType<Type> | undefined
 					: [T] extends [MapSchema<infer Type>]
@@ -157,9 +238,13 @@ export type InferType<T extends Schema> = [T] extends [() => infer S]
 								? Set<InferType<Type>>
 								: [T] extends [TupleSchema<infer Elements>]
 									? InferTupleType<Elements>
-									: [T] extends [UnionSchema<infer Discriminant, infer Variants>]
-										? InferUnionType<Discriminant, Variants>
-										: never;
+									: [T] extends [UnionSchema<infer DiscriminantType, infer Variants, infer TagName>]
+										? InferUnionType<DiscriminantType, Variants, TagName>
+										: [T] extends [UntaggedUnionSchema<infer Variants>]
+											? InferUntaggedUnionType<Variants>
+											: never;
+
+type ExpandObject<Type> = Type extends object ? { [Key in keyof Type]: Type[Key] } : Type;
 
 type InferPrimitiveType<T extends PrimitiveType> = T extends "string"
 	? string
@@ -174,7 +259,7 @@ type InferPrimitiveType<T extends PrimitiveType> = T extends "string"
 					: never;
 
 type InferObjectType<Properties extends Record<string, Schema>> = {
-	[Key in keyof Properties]: InferType<Properties[Key]>;
+	-readonly [Key in keyof Properties]: InferType<Properties[Key]>;
 };
 
 type InferMapType<Type extends Schema> = {
@@ -186,12 +271,32 @@ type InferTupleType<Elements extends Schema[]> = {
 };
 
 type InferUnionType<
-	Discriminant extends string,
-	Variants extends Record<string, Record<string, Schema>>,
+	DiscriminantType extends UnionDiscriminantType,
+	Variants extends UnionVariantMap,
+	TagName extends string,
 > = {
-	[Key in keyof Variants]: {
-		[D in Discriminant]: Key;
-	} & {
-		[K in keyof Variants[Key]]: InferType<Variants[Key][K]>;
-	};
+	[Key in keyof Variants]: ExpandObject<
+		{
+			[Tag in TagName]: InferUnionDiscriminantValue<DiscriminantType, Key>;
+		} & {
+			-readonly [K in keyof Variants[Key] as K extends TagName ? never : K]: InferType<
+				Variants[Key][K]
+			>;
+		}
+	>;
 }[keyof Variants];
+
+type InferUnionDiscriminantValue<
+	DiscriminantType extends UnionDiscriminantType,
+	Key,
+> = DiscriminantType extends "string"
+	? Key
+	: Key extends number
+		? Key
+		: Key extends `${infer NumberKey extends number}`
+			? NumberKey
+			: number;
+
+type InferUntaggedUnionType<Variants extends readonly Schema[]> = {
+	[Key in keyof Variants]: Variants[Key] extends Schema ? InferType<Variants[Key]> : never;
+}[number];

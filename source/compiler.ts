@@ -22,7 +22,7 @@ import {
 	writeVarUint,
 	writeVarUint8Array,
 } from "./binary";
-import { readSchema, writeSchema } from "./dynamic";
+import { readSchema, readUntaggedUnion, writeSchema, writeUntaggedUnion } from "./dynamic";
 import type { Schema } from "./schema";
 
 type WriteFunction = (encoder: Encoder, value: any) => void;
@@ -45,6 +45,7 @@ const compiledHelpers = {
 	readFloat64,
 	readCachedVarString,
 	readSchema,
+	readUntaggedUnion,
 	readUint8,
 	readVarBigInt,
 	readVarInt,
@@ -56,6 +57,7 @@ const compiledHelpers = {
 	writeFloat32,
 	writeFloat64,
 	writeSchema,
+	writeUntaggedUnion,
 	writeUint8,
 	writeVarBigInt,
 	writeVarInt,
@@ -134,13 +136,13 @@ function emitWrite(schema: Schema, value: string, encoder: string, state: Compil
 			return `if (${value} === undefined) {writeUint8(${encoder}, 0);} else {writeUint8(${encoder}, 1);${emitWrite(schema.schema, value, encoder, state)}}`;
 		case "union": {
 			const discriminant = createId("discriminant", state);
-			let body = `const ${discriminant} = ${value}[${JSON.stringify(schema.discriminant)}];`;
+			let body = `const ${discriminant} = ${value}[${JSON.stringify(schema.tagName)}];`;
 			body += emitWrite(schema.type, discriminant, encoder, state);
 			body += `switch (${discriminant}) {`;
 			for (const [variant, variantSchema] of Object.entries(schema.variants)) {
 				body += `case ${variantLiteral(schema.type, variant)}:`;
 				for (const [key, fieldSchema] of Object.entries(variantSchema)) {
-					if (key !== schema.discriminant) {
+					if (key !== schema.tagName) {
 						body += emitWrite(fieldSchema, `${value}[${JSON.stringify(key)}]`, encoder, state);
 					}
 				}
@@ -148,6 +150,10 @@ function emitWrite(schema: Schema, value: string, encoder: string, state: Compil
 			}
 			body += `default: throw new Error("Unknown union variant: " + ${discriminant});}`;
 			return body;
+		}
+		case "untaggedUnion": {
+			const index = state.lazySchemas.push(() => schema) - 1;
+			return `writeUntaggedUnion(lazySchemas[${index}](), ${value}, ${encoder});`;
 		}
 		case "map": {
 			const index = createId("index", state);
@@ -258,9 +264,9 @@ function emitRead(schema: Schema, decoder: string, state: CompileState): ReadFra
 			let body = `${discriminantValue.setup}const ${discriminant} = ${discriminantValue.expression};let ${result};switch (${discriminant}) {`;
 			for (const [variant, variantSchema] of Object.entries(schema.variants)) {
 				const variantResult = createId("result", state);
-				body += `case ${variantLiteral(schema.type, variant)}:{const ${variantResult} = {${JSON.stringify(schema.discriminant)}: ${discriminant}};`;
+				body += `case ${variantLiteral(schema.type, variant)}:{const ${variantResult} = {${JSON.stringify(schema.tagName)}: ${discriminant}};`;
 				for (const [key, fieldSchema] of Object.entries(variantSchema)) {
-					if (key !== schema.discriminant) {
+					if (key !== schema.tagName) {
 						const field = emitRead(fieldSchema, decoder, state);
 						body += `${field.setup}${variantResult}[${JSON.stringify(key)}] = ${field.expression};`;
 					}
@@ -269,6 +275,13 @@ function emitRead(schema: Schema, decoder: string, state: CompileState): ReadFra
 			}
 			body += `default: throw new Error("Unknown union variant: " + ${discriminant});}`;
 			return { expression: result, setup: body };
+		}
+		case "untaggedUnion": {
+			const index = state.lazySchemas.push(() => schema) - 1;
+			return {
+				expression: `readUntaggedUnion(lazySchemas[${index}](), ${decoder})`,
+				setup: "",
+			};
 		}
 		case "map": {
 			const cacheIndex = state.stringCaches.push([]) - 1;

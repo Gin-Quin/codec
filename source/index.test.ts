@@ -36,14 +36,14 @@ interface WireFormatFixture {
 }
 
 type WireRecursiveSchema = UnionSchema<
-	"type",
+	"string",
 	{
 		number: { number: "int" };
 		child: { child: () => WireRecursiveSchema };
 	}
 >;
 
-const wireRecursiveSchema: WireRecursiveSchema = union("type", "string", {
+const wireRecursiveSchema: WireRecursiveSchema = union("string", {
 	number: { number: "int" },
 	child: { child: (): WireRecursiveSchema => wireRecursiveSchema },
 });
@@ -155,16 +155,29 @@ const wireFormatFixtures: WireFormatFixture[] = [
 	},
 	{
 		name: "composed union string discriminant",
-		schema: union("kind", "string", {
+		schema: union("string", {
 			user: { name: "string", age: "int" },
 			product: { title: "string", price: "uint" },
+		}),
+		value: { type: "user", name: "Ada", age: 37 },
+		expectedBytes: [4, 117, 115, 101, 114, 3, 65, 100, 97, 37],
+	},
+	{
+		name: "composed union custom tag name",
+		schema: union({
+			tagName: "kind",
+			tagType: "string",
+			variants: {
+				user: { name: "string", age: "int" },
+				product: { title: "string", price: "uint" },
+			},
 		}),
 		value: { kind: "user", name: "Ada", age: 37 },
 		expectedBytes: [4, 117, 115, 101, 114, 3, 65, 100, 97, 37],
 	},
 	{
 		name: "composed union uint discriminant",
-		schema: union("type", "uint", {
+		schema: union("uint", {
 			0: { x: "string" },
 			1: { y: "uint" },
 		}),
@@ -173,12 +186,21 @@ const wireFormatFixtures: WireFormatFixture[] = [
 	},
 	{
 		name: "composed union int discriminant",
-		schema: union("kind", "int", {
+		schema: union("int", {
 			"-1": { error: "string" },
 			2: { ok: "boolean" },
 		}),
-		value: { kind: -1, error: "no" },
+		value: { type: -1, error: "no" },
 		expectedBytes: [65, 2, 110, 111],
+	},
+	{
+		name: "composed untagged union",
+		schema: union([
+			object({ name: "string", age: "int" }),
+			object({ title: "string", price: "uint" }),
+		]),
+		value: { title: "Widget", price: 300 },
+		expectedBytes: [1, 6, 87, 105, 100, 103, 101, 116, 172, 2],
 	},
 	{
 		name: "composed map",
@@ -458,7 +480,9 @@ describe("signature codec", () => {
 				const codec = createCodec(fixture.schema);
 				const expectedBytes = new Uint8Array(fixture.expectedBytes);
 
-				expect(codec.encode(fixture.value)).toEqual(expectedBytes);
+				expect((codec.encode as (value: any) => Uint8Array<ArrayBuffer>)(fixture.value)).toEqual(
+					expectedBytes,
+				);
 				expectWireFixtureDecodedValue(fixture, codec.decode(expectedBytes));
 				expectWireFixtureDecodedValue(fixture, codec.decode(createDecoder(expectedBytes)));
 			});
@@ -482,7 +506,8 @@ describe("signature codec", () => {
 		// Type inference check
 		type Person = InferType<typeof schema>;
 		const person: Person = { name: "Bob", age: 25 };
-		expect(person.name).toBe("Bob");
+		person.name = "Robert";
+		expect(person.name).toBe("Robert");
 	});
 
 	test("nested object", () => {
@@ -908,7 +933,7 @@ describe("signature codec", () => {
 	});
 
 	test("union with int discriminant", () => {
-		const schema = union("type", "uint", {
+		const schema = union("uint", {
 			0: { x: "string", y: "int" },
 			1: { z: array("string") },
 		});
@@ -931,25 +956,130 @@ describe("signature codec", () => {
 		if (msg.type === 0) {
 			expect(msg.x).toBe("test");
 		}
+
+		// @ts-expect-error Numeric tag types only allow numeric variant keys.
+		union("uint", { zabu: { value: "string" } });
 	});
 
 	test("union with string discriminant", () => {
-		const schema = union("kind", "string", {
+		const schema = union("string", {
 			user: { name: "string", age: "int" },
 			product: { title: "string", price: "uint" },
 		});
 
 		const codec = createCodec(schema);
 
-		const user = { kind: "user" as const, name: "Alice", age: 30 };
+		const user = { type: "user" as const, name: "Alice", age: 30 };
 		const encodedUser = codec.encode(user);
 		const decodedUser = codec.decode(encodedUser);
 		expect(decodedUser).toEqual(user);
 
-		const product = { kind: "product" as const, title: "Widget", price: 1000 };
+		const product = { type: "product" as const, title: "Widget", price: 1000 };
 		const encodedProduct = codec.encode(product);
 		const decodedProduct = codec.decode(encodedProduct);
 		expect(decodedProduct).toEqual(product);
+
+		type Message = InferType<typeof schema>;
+		const message: Message = { type: "user", name: "Alice", age: 30 };
+		if (message.type === "user") {
+			message.name = "Bob";
+			expect(message.name).toBe("Bob");
+		}
+	});
+
+	test("union with custom tag name", () => {
+		const schema = union({
+			tagName: "kind",
+			tagType: "string",
+			variants: {
+				event: { type: "string", value: "uint" },
+				error: { message: "string" },
+			},
+		});
+
+		const codec = createCodec(schema);
+
+		const event = { kind: "event" as const, type: "external", value: 42 };
+		const encodedEvent = codec.encode(event);
+		const decodedEvent = codec.decode(encodedEvent);
+		expect(decodedEvent).toEqual(event);
+
+		const error = { kind: "error" as const, message: "failed" };
+		const encodedError = codec.encode(error);
+		const decodedError = codec.decode(encodedError);
+		expect(decodedError).toEqual(error);
+
+		type Message = InferType<typeof schema>;
+		const message: Message = { kind: "event", type: "external", value: 42 };
+		if (message.kind === "event") {
+			message.type = "internal";
+			expect(message.type).toBe("internal");
+		}
+
+		// @ts-expect-error Numeric tag types only allow numeric variant keys.
+		union({ tagName: "kind", tagType: "int", variants: { zabu: { value: "string" } } });
+	});
+
+	test("lazy union with custom tag name", () => {
+		const schema = () =>
+			union({
+				tagName: "kind",
+				tagType: "uint",
+				variants: {
+					0: { x: "string" },
+					1: { y: "uint" },
+				},
+			});
+
+		const codec = createCodec(schema);
+		const value = { kind: 1 as const, y: 300 };
+
+		expect(codec.encode(value)).toEqual(new Uint8Array([1, 172, 2]));
+		expect(codec.decode(new Uint8Array([1, 172, 2]))).toEqual(value);
+	});
+
+	test("untagged union with primitive variants", () => {
+		const schema = union(["string", "uint"]);
+		const codec = createCodec(schema);
+
+		expect(codec.encode("hello")).toEqual(new Uint8Array([0, 5, 104, 101, 108, 108, 111]));
+		expect(codec.decode(new Uint8Array([0, 5, 104, 101, 108, 108, 111]))).toBe("hello");
+
+		expect(codec.encode(42)).toEqual(new Uint8Array([1, 42]));
+		expect(codec.decode(new Uint8Array([1, 42]))).toBe(42);
+
+		type Message = InferType<typeof schema>;
+		const text: Message = "test";
+		const count: Message = 123;
+		expect([text, count]).toEqual(["test", 123]);
+	});
+
+	test("untagged union matches array element schemas", () => {
+		const schema = union([array("string"), array("uint")]);
+		const codec = createCodec(schema);
+
+		expect(codec.encode(["a", "bc"])).toEqual(new Uint8Array([0, 2, 1, 97, 2, 98, 99]));
+		expect(codec.decode(new Uint8Array([0, 2, 1, 97, 2, 98, 99]))).toEqual(["a", "bc"]);
+
+		expect(codec.encode([1, 2])).toEqual(new Uint8Array([1, 2, 1, 2]));
+		expect(codec.decode(new Uint8Array([1, 2, 1, 2]))).toEqual([1, 2]);
+	});
+
+	test("untagged union with object variants", () => {
+		const schema = union([
+			object({ name: "string", age: "int" }),
+			object({ title: "string", price: "uint" }),
+		]);
+
+		const codec = createCodec(schema);
+
+		const user = { name: "Alice", age: 30 };
+		expect(codec.decode(codec.encode(user))).toEqual(user);
+
+		const product = { title: "Widget", price: 1000 };
+		expect(codec.decode(codec.encode(product))).toEqual(product);
+		expect(() => codec.encode({ unknown: true } as any)).toThrow("No matching union variant");
+		expect(() => codec.decode(new Uint8Array([2]))).toThrow("Unknown union variant: 2");
 	});
 
 	test("complex nested structure", () => {
@@ -1021,14 +1151,14 @@ describe("signature codec", () => {
 
 	test("recursive type", () => {
 		type RecursiveSchema = UnionSchema<
-			"type",
+			"string",
 			{
 				number: { number: "int" };
 				child: { child: () => RecursiveSchema };
 			}
 		>;
 
-		const schema: RecursiveSchema = union("type", "string", {
+		const schema: RecursiveSchema = union("string", {
 			number: { number: "int" },
 			child: { child: (): RecursiveSchema => schema },
 		});

@@ -3,7 +3,7 @@
 `codec` is a small and simple binary serialization library for TypeScript.
 
 - ⚡ Super-fast encoding and decoding speed (see [benchmarks](#benchmarks)).
-- 🔀 Well-typed unions with discriminants.
+- 🔀 Well-typed tagged and untagged unions.
 
 Define a schema once, compile it with `createCodec(schema)`, then use the resulting codec to encode and decode values.
 
@@ -55,33 +55,37 @@ const codec = createCodec(schema);
 const decoded = codec.decode(codec.encode(value));
 ```
 
-### Discriminated Union
+### Tagged Union
 
-Unions are one of the most useful features of this library. The discriminant is
-encoded first, then only the fields for the matching variant are encoded.
+Unions are one of the most useful features of this library. The tag is encoded
+first, then only the fields for the matching variant are encoded.
 
 ```ts
 import { createCodec, union } from "codec";
 
 const eventCodec = createCodec(
-	union("type", "string", {
-		created: {
-			id: "string",
-			title: "string",
-		},
-		renamed: {
-			id: "string",
-			title: "string",
-			previousTitle: "string",
-		},
-		deleted: {
-			id: "string",
+	union({
+		tagName: "kind",
+		tagType: "string",
+		variants: {
+			created: {
+				id: "string",
+				title: "string",
+			},
+			renamed: {
+				id: "string",
+				title: "string",
+				previousTitle: "string",
+			},
+			deleted: {
+				id: "string",
+			},
 		},
 	}),
 );
 
 const encoded = eventCodec.encode({
-	type: "renamed",
+	kind: "renamed",
 	id: "note-1",
 	title: "Project plan",
 	previousTitle: "Draft",
@@ -89,9 +93,9 @@ const encoded = eventCodec.encode({
 
 const decoded = eventCodec.decode(encoded);
 // decoded is typed as:
-// | { type: "created"; id: string; title: string }
-// | { type: "renamed"; id: string; title: string; previousTitle: string }
-// | { type: "deleted"; id: string }
+// | { kind: "created"; id: string; title: string }
+// | { kind: "renamed"; id: string; title: string; previousTitle: string }
+// | { kind: "deleted"; id: string }
 ```
 
 ## Performance Model
@@ -342,21 +346,27 @@ codec.decode(
 
 ### Unions
 
-`union(discriminant, type, variants)` creates a discriminated union.
+`union({ tagName, tagType, variants })` creates a tagged union.
 
-The discriminant can be encoded as `"string"`, `"int"`, or `"uint"`. Variant
-keys are matched against that encoded discriminant value.
+The tag is exposed as the value field named by `tagName` and can be encoded as
+`"string"`, `"int"`, or `"uint"`. Variant keys are matched against that encoded
+tag value. `union(type, variants)` is shorthand for a tagged union whose
+`tagName` is `"type"`.
 
 ```ts
 import { array, createCodec, union } from "codec";
 
 const messageCodec = createCodec(
-	union("kind", "string", {
-		text: {
-			body: "string",
-		},
-		files: {
-			names: array("string"),
+	union({
+		tagName: "kind",
+		tagType: "string",
+		variants: {
+			text: {
+				body: "string",
+			},
+			files: {
+				names: array("string"),
+			},
 		},
 	}),
 );
@@ -369,43 +379,78 @@ messageCodec.decode(
 );
 ```
 
-Numeric discriminants are useful for compact wire formats.
+Numeric tags are useful for compact wire formats.
 
 ```ts
 const compactMessageCodec = createCodec(
-	union("type", "uint", {
-		0: {
-			x: "string",
-			y: "int",
-		},
-		1: {
-			values: array("string"),
+	union({
+		tagName: "kind",
+		tagType: "uint",
+		variants: {
+			0: {
+				x: "string",
+				y: "int",
+			},
+			1: {
+				values: array("string"),
+			},
 		},
 	}),
 );
 
 compactMessageCodec.decode(
 	compactMessageCodec.encode({
-		type: 0,
+		kind: 0,
 		x: "hello",
 		y: 42,
 	}),
 );
 ```
 
-The discriminant field itself is automatically reconstructed during decoding.
-It should not be repeated inside the variant field definitions.
+The tag field itself is automatically reconstructed during decoding. It should
+not be repeated inside the variant field definitions.
 
 ```ts
-const schema = union("status", "string", {
-	loading: {},
-	ready: {
-		value: "string",
-	},
-	failed: {
-		reason: "string",
+const schema = union({
+	tagName: "status",
+	tagType: "string",
+	variants: {
+		loading: {},
+		ready: {
+			value: "string",
+		},
+		failed: {
+			reason: "string",
+		},
 	},
 });
+```
+
+`union(variants)` creates an untagged union. It encodes a `uint` variant index
+first, followed by the matching variant payload. Encoding picks the first
+variant whose schema matches the value, so put more specific variants before
+broader ones when shapes can overlap.
+
+```ts
+const payloadCodec = createCodec(
+	union([
+		object({
+			name: "string",
+			age: "int",
+		}),
+		object({
+			title: "string",
+			price: "uint",
+		}),
+	]),
+);
+
+payloadCodec.decode(
+	payloadCodec.encode({
+		title: "Widget",
+		price: 1000,
+	}),
+);
 ```
 
 Recursive schemas can be expressed with lazy schema functions.
@@ -414,14 +459,14 @@ Recursive schemas can be expressed with lazy schema functions.
 import { createCodec, type UnionSchema, union } from "codec";
 
 type NodeSchema = UnionSchema<
-	"type",
+	"string",
 	{
 		number: { value: "int" };
 		child: { child: () => NodeSchema };
 	}
 >;
 
-const schema: NodeSchema = union("type", "string", {
+const schema: NodeSchema = union("string", {
 	number: { value: "int" },
 	child: { child: () => schema },
 });
@@ -463,7 +508,9 @@ object(fields);
 map(element);
 tuple(...elements);
 optional(schema);
-union(discriminant, type, variants);
+union({ tagName, tagType, variants });
+union(type, variants);
+union(variants);
 ```
 
 Use `InferType<typeof schema>` to derive the TypeScript value type from a
