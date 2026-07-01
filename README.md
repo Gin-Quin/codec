@@ -144,6 +144,10 @@ Supported primitive schemas are:
 - `"date"`: JavaScript `Date`, encoded as its millisecond timestamp; invalid dates are rejected
 - `"float32"`: 32-bit floating-point number, fixed-width little-endian encoded
 - `"float64"`: 64-bit floating-point number, fixed-width little-endian encoded
+- `"unknown"`: prefixes each value with a discovered schema, then encodes the value with that schema
+- `"schema"`: encodes and decodes concrete schema values
+- `"null"`: the literal `null` value
+- `"undefined"`: the literal `undefined` value
 
 ```ts
 const stringCodec = createCodec("string");
@@ -169,6 +173,58 @@ float32Codec.decode(float32Codec.encode(1 / 3));
 
 const float64Codec = createCodec("float64");
 float64Codec.decode(float64Codec.encode(Math.PI));
+
+const unknownCodec = createCodec("unknown");
+unknownCodec.decode(
+	unknownCodec.encode({
+		id: 1,
+		tags: ["work", "draft"],
+		metadata: undefined,
+	}),
+);
+```
+
+### Unknown Values and Schema Values
+
+Use `"unknown"` when the encoder should discover the schema from the value at
+runtime. The discovered schema is written before the value, so decoding does not
+need the original TypeScript schema.
+
+```ts
+import { createCodec, schemaOf } from "codec";
+
+const codec = createCodec("unknown");
+
+const encoded = codec.encode({
+	title: "Notes",
+	version: 1,
+	archived: false,
+});
+
+const decoded = codec.decode(encoded);
+// { title: "Notes", version: 1, archived: false }
+
+const discovered = schemaOf([{ name: "Ada" }, { name: "Bob", age: 37 }]);
+// array(object({ name: "string", age: optional("uint") }))
+```
+
+Use `"schema"` or the `encodeSchema` and `decodeSchema` helpers to send schemas
+as data. Concrete schemas round-trip; lazy schema functions are not serializable.
+
+```ts
+import { createCodec, decodeSchema, encodeSchema, object, optional } from "codec";
+
+const userSchema = object({
+	id: "uint",
+	name: "string",
+	email: optional("string"),
+});
+
+const schemaBytes = encodeSchema(userSchema);
+const decodedSchema = decodeSchema(schemaBytes);
+
+const userCodec = createCodec(decodedSchema);
+userCodec.decode(userCodec.encode({ id: 1, name: "Ada" }));
 ```
 
 ### BigInts
@@ -502,6 +558,18 @@ interface Codec<T> {
 
 - `encode(value)` returns an exact-sized `Uint8Array` copy.
 - `decode(buffer)` accepts a `Uint8Array` or an existing `Decoder`.
+
+### Runtime Schema Helpers
+
+```ts
+schemaOf(value): Schema;
+encodeSchema(schema): Uint8Array;
+decodeSchema(buffer): Schema;
+```
+
+- `schemaOf(value)` discovers a concrete schema from a runtime value.
+- `encodeSchema(schema)` writes the binary representation of a concrete schema.
+- `decodeSchema(buffer)` reads a concrete schema from bytes or an existing decoder.
 
 ### Schema Builders
 

@@ -20,20 +20,47 @@ import {
 	writeVarUint,
 	writeVarUint8Array,
 } from "./binary";
-import type {
-	ArraySchema,
-	BigIntSchema,
-	MapSchema,
-	ObjectSchema,
-	OptionalSchema,
-	PrimitiveType,
-	Schema,
-	SetSchema,
-	TupleSchema,
-	UnionDiscriminantType,
-	UnionSchema,
-	UntaggedUnionSchema,
+import {
+	type ArraySchema,
+	type BigIntSchema,
+	bigint as bigintSchema,
+	isSchema,
+	type MapSchema,
+	type ObjectSchema,
+	type OptionalSchema,
+	type PrimitiveType,
+	type Schema,
+	type SetSchema,
+	schemaOf,
+	type TupleSchema,
+	type UnionDiscriminantType,
+	type UnionSchema,
+	type UntaggedUnionSchema,
 } from "./schema";
+
+enum SchemaTag {
+	String = 0,
+	Int = 1,
+	Uint = 2,
+	Uint8Array = 3,
+	Boolean = 4,
+	Date = 5,
+	Float32 = 6,
+	Float64 = 7,
+	BigInt = 8,
+	Array = 9,
+	Object = 10,
+	Optional = 11,
+	Union = 12,
+	UntaggedUnion = 13,
+	Map = 14,
+	Set = 15,
+	Tuple = 16,
+	Unknown = 17,
+	Schema = 18,
+	Null = 19,
+	Undefined = 20,
+}
 
 /** Writes a value using a schema without precompiling a codec. */
 export function writeSchema(schema: Schema, value: any, encoder: Encoder): void {
@@ -66,6 +93,15 @@ export function writeSchema(schema: Schema, value: any, encoder: Encoder): void 
 				break;
 			case "float64":
 				writeFloat64(encoder, value);
+				break;
+			case "unknown":
+				writeUnknown(value, encoder);
+				break;
+			case "schema":
+				writeSchemaValue(value, encoder);
+				break;
+			case "null":
+			case "undefined":
 				break;
 		}
 	} else {
@@ -197,6 +233,244 @@ function writeTuple(schema: TupleSchema<Schema[]>, value: any[], encoder: Encode
 	}
 }
 
+/** Writes a concrete schema value. */
+export function writeSchemaValue(schema: Schema, encoder: Encoder): void {
+	if (typeof schema === "function") {
+		throw new Error("Cannot encode lazy schema functions");
+	}
+
+	if (typeof schema === "string") {
+		writePrimitiveSchemaValue(schema, encoder);
+		return;
+	}
+
+	if (typeof schema !== "object" || schema === null) {
+		throw new Error("Cannot encode invalid schema");
+	}
+
+	switch (schema._type) {
+		case "array":
+			writeUint8(encoder, SchemaTag.Array);
+			writeSchemaValue(schema.element, encoder);
+			break;
+		case "object":
+			writeUint8(encoder, SchemaTag.Object);
+			writeSchemaFields(schema.fields, encoder);
+			break;
+		case "optional":
+			writeUint8(encoder, SchemaTag.Optional);
+			writeSchemaValue(schema.schema, encoder);
+			break;
+		case "union": {
+			writeUint8(encoder, SchemaTag.Union);
+			writeVarString(encoder, schema.tagName);
+			writeSchemaValue(schema.type, encoder);
+			const variantKeys = Object.keys(schema.variants);
+			writeVarUint(encoder, variantKeys.length);
+			for (let index = 0; index < variantKeys.length; index++) {
+				const variant = variantKeys[index]!;
+				writeVarString(encoder, variant);
+				writeSchemaFields(schema.variants[variant]!, encoder);
+			}
+			break;
+		}
+		case "untaggedUnion":
+			writeUint8(encoder, SchemaTag.UntaggedUnion);
+			writeVarUint(encoder, schema.variants.length);
+			for (const variant of schema.variants) {
+				writeSchemaValue(variant, encoder);
+			}
+			break;
+		case "map":
+			writeUint8(encoder, SchemaTag.Map);
+			writeSchemaValue(schema.element, encoder);
+			break;
+		case "bigint":
+			writeUint8(encoder, SchemaTag.BigInt);
+			writeVarUint(encoder, schema.maxBytes);
+			break;
+		case "set":
+			writeUint8(encoder, SchemaTag.Set);
+			writeSchemaValue(schema.element, encoder);
+			break;
+		case "tuple":
+			writeUint8(encoder, SchemaTag.Tuple);
+			writeVarUint(encoder, schema.elements.length);
+			for (const element of schema.elements) {
+				writeSchemaValue(element, encoder);
+			}
+			break;
+		default:
+			throw new Error(`Unknown schema type: ${String((schema as { _type?: unknown })._type)}`);
+	}
+}
+
+function writePrimitiveSchemaValue(schema: PrimitiveType, encoder: Encoder): void {
+	switch (schema) {
+		case "string":
+			writeUint8(encoder, SchemaTag.String);
+			break;
+		case "int":
+			writeUint8(encoder, SchemaTag.Int);
+			break;
+		case "uint":
+			writeUint8(encoder, SchemaTag.Uint);
+			break;
+		case "uint8Array":
+			writeUint8(encoder, SchemaTag.Uint8Array);
+			break;
+		case "boolean":
+			writeUint8(encoder, SchemaTag.Boolean);
+			break;
+		case "date":
+			writeUint8(encoder, SchemaTag.Date);
+			break;
+		case "float32":
+			writeUint8(encoder, SchemaTag.Float32);
+			break;
+		case "float64":
+			writeUint8(encoder, SchemaTag.Float64);
+			break;
+		case "unknown":
+			writeUint8(encoder, SchemaTag.Unknown);
+			break;
+		case "schema":
+			writeUint8(encoder, SchemaTag.Schema);
+			break;
+		case "null":
+			writeUint8(encoder, SchemaTag.Null);
+			break;
+		case "undefined":
+			writeUint8(encoder, SchemaTag.Undefined);
+			break;
+		default:
+			throw new Error(`Unknown primitive schema: ${String(schema)}`);
+	}
+}
+
+function writeSchemaFields(fields: Record<string, Schema>, encoder: Encoder): void {
+	const keys = Object.keys(fields);
+	writeVarUint(encoder, keys.length);
+	for (let index = 0; index < keys.length; index++) {
+		const key = keys[index]!;
+		writeVarString(encoder, key);
+		writeSchemaValue(fields[key]!, encoder);
+	}
+}
+
+/** Reads a concrete schema value. */
+export function readSchemaValue(decoder: Decoder): Schema {
+	const tag = readUint8(decoder);
+	switch (tag) {
+		case SchemaTag.String:
+			return "string";
+		case SchemaTag.Int:
+			return "int";
+		case SchemaTag.Uint:
+			return "uint";
+		case SchemaTag.Uint8Array:
+			return "uint8Array";
+		case SchemaTag.Boolean:
+			return "boolean";
+		case SchemaTag.Date:
+			return "date";
+		case SchemaTag.Float32:
+			return "float32";
+		case SchemaTag.Float64:
+			return "float64";
+		case SchemaTag.BigInt:
+			return bigintSchema(readVarUint(decoder));
+		case SchemaTag.Array:
+			return { _type: "array", element: readSchemaValue(decoder) };
+		case SchemaTag.Object:
+			return { _type: "object", fields: readSchemaFields(decoder) };
+		case SchemaTag.Optional:
+			return { _type: "optional", schema: readSchemaValue(decoder) };
+		case SchemaTag.Union:
+			return readUnionSchemaValue(decoder);
+		case SchemaTag.UntaggedUnion:
+			return readUntaggedUnionSchemaValue(decoder);
+		case SchemaTag.Map:
+			return { _type: "map", element: readSchemaValue(decoder) };
+		case SchemaTag.Set:
+			return { _type: "set", element: readSchemaValue(decoder) };
+		case SchemaTag.Tuple:
+			return readTupleSchemaValue(decoder);
+		case SchemaTag.Unknown:
+			return "unknown";
+		case SchemaTag.Schema:
+			return "schema";
+		case SchemaTag.Null:
+			return "null";
+		case SchemaTag.Undefined:
+			return "undefined";
+		default:
+			throw new Error(`Unknown schema tag: ${tag}`);
+	}
+}
+
+function readSchemaFields(decoder: Decoder): Record<string, Schema> {
+	const length = readVarUint(decoder);
+	const fields: Record<string, Schema> = {};
+	for (let index = 0; index < length; index++) {
+		fields[readVarString(decoder)] = readSchemaValue(decoder);
+	}
+	return fields;
+}
+
+function readUnionSchemaValue(
+	decoder: Decoder,
+): UnionSchema<UnionDiscriminantType, Record<string | number, Record<string, Schema>>, string> {
+	const tagName = readVarString(decoder);
+	const type = readUnionDiscriminantSchemaValue(decoder);
+	const length = readVarUint(decoder);
+	const variants: Record<string, Record<string, Schema>> = {};
+	for (let index = 0; index < length; index++) {
+		variants[readVarString(decoder)] = readSchemaFields(decoder);
+	}
+
+	return { _type: "union", tagName, type, variants };
+}
+
+function readUnionDiscriminantSchemaValue(decoder: Decoder): UnionDiscriminantType {
+	const schema = readSchemaValue(decoder);
+	if (schema === "string" || schema === "int" || schema === "uint") {
+		return schema;
+	}
+
+	throw new Error("Invalid union discriminant schema");
+}
+
+function readUntaggedUnionSchemaValue(decoder: Decoder): UntaggedUnionSchema<Schema[]> {
+	const length = readVarUint(decoder);
+	const variants: Schema[] = new Array(length);
+	for (let index = 0; index < length; index++) {
+		variants[index] = readSchemaValue(decoder);
+	}
+	return { _type: "untaggedUnion", variants };
+}
+
+function readTupleSchemaValue(decoder: Decoder): TupleSchema<Schema[]> {
+	const length = readVarUint(decoder);
+	const elements: Schema[] = new Array(length);
+	for (let index = 0; index < length; index++) {
+		elements[index] = readSchemaValue(decoder);
+	}
+	return { _type: "tuple", elements };
+}
+
+/** Writes a value prefixed by a discovered schema for that value. */
+export function writeUnknown(value: unknown, encoder: Encoder): void {
+	const discoveredSchema = schemaOf(value);
+	writeSchemaValue(discoveredSchema, encoder);
+	writeSchema(discoveredSchema, value, encoder);
+}
+
+/** Reads a value prefixed by its schema. */
+export function readUnknown(decoder: Decoder): unknown {
+	return readSchema(readSchemaValue(decoder), decoder);
+}
+
 /** Reads a value using a schema without precompiling a codec. */
 export function readSchema(schema: Schema, decoder: Decoder): any {
 	if (typeof schema === "function") {
@@ -247,6 +521,14 @@ function readPrimitive<P extends PrimitiveType>(type: P, decoder: Decoder): any 
 			return readFloat32(decoder);
 		case "float64":
 			return readFloat64(decoder);
+		case "unknown":
+			return readUnknown(decoder);
+		case "schema":
+			return readSchemaValue(decoder);
+		case "null":
+			return null;
+		case "undefined":
+			return undefined;
 	}
 }
 
@@ -454,6 +736,14 @@ function matchesPrimitive(schema: PrimitiveType, value: any): boolean {
 		case "float32":
 		case "float64":
 			return typeof value === "number";
+		case "unknown":
+			return true;
+		case "schema":
+			return isSchema(value);
+		case "null":
+			return value === null;
+		case "undefined":
+			return value === undefined;
 	}
 }
 

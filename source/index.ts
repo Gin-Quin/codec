@@ -1,5 +1,6 @@
 import { createDecoder, createEncoder, type Decoder, toUint8Array } from "./binary";
 import { compileReader, compileWriter } from "./compiler";
+import { readSchemaValue, writeSchemaValue } from "./dynamic";
 import type { InferType, Schema } from "./schema";
 
 export {
@@ -45,7 +46,18 @@ export type {
 	UnionSchema,
 	UntaggedUnionSchema,
 } from "./schema";
-export { array, bigint, map, object, optional, set, tuple, union } from "./schema";
+export {
+	array,
+	bigint,
+	isSchema,
+	map,
+	object,
+	optional,
+	schemaOf,
+	set,
+	tuple,
+	union,
+} from "./schema";
 
 /** Encodes and decodes values for a compiled schema. */
 export interface Codec<T> {
@@ -83,4 +95,20 @@ export function createCodec<T extends Schema>(schema: T): Codec<InferType<T>> {
 			return read(decoder);
 		},
 	} as Codec<InferType<T>>;
+}
+
+/** Encodes a concrete schema value into its binary schema representation. */
+export function encodeSchema(schema: Schema): Uint8Array<ArrayBuffer> {
+	const encoder = createEncoder();
+	writeSchemaValue(schema, encoder);
+	return toUint8Array(encoder);
+}
+
+/** Decodes a concrete schema value from bytes or an existing decoder. */
+export function decodeSchema(buffer: Uint8Array | Decoder): Schema {
+	if (!(buffer instanceof Uint8Array)) {
+		return readSchemaValue(buffer);
+	}
+
+	return readSchemaValue(createDecoder(buffer));
 }

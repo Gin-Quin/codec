@@ -22,7 +22,16 @@ import {
 	writeVarUint,
 	writeVarUint8Array,
 } from "./binary";
-import { readSchema, readUntaggedUnion, writeSchema, writeUntaggedUnion } from "./dynamic";
+import {
+	readSchema,
+	readSchemaValue,
+	readUnknown,
+	readUntaggedUnion,
+	writeSchema,
+	writeSchemaValue,
+	writeUnknown,
+	writeUntaggedUnion,
+} from "./dynamic";
 import type { Schema } from "./schema";
 
 type WriteFunction = (encoder: Encoder, value: any) => void;
@@ -45,6 +54,8 @@ const compiledHelpers = {
 	readFloat64,
 	readCachedVarString,
 	readSchema,
+	readSchemaValue,
+	readUnknown,
 	readUntaggedUnion,
 	readUint8,
 	readVarBigInt,
@@ -57,6 +68,8 @@ const compiledHelpers = {
 	writeFloat32,
 	writeFloat64,
 	writeSchema,
+	writeSchemaValue,
+	writeUnknown,
 	writeUntaggedUnion,
 	writeUint8,
 	writeVarBigInt,
@@ -116,6 +129,13 @@ function emitWrite(schema: Schema, value: string, encoder: string, state: Compil
 				return `ensureCapacity(${encoder}, 4);${encoder}.view.setFloat32(${encoder}.pos, ${value}, true);${encoder}.pos += 4;`;
 			case "float64":
 				return `ensureCapacity(${encoder}, 8);${encoder}.view.setFloat64(${encoder}.pos, ${value}, true);${encoder}.pos += 8;`;
+			case "unknown":
+				return `writeUnknown(${value}, ${encoder});`;
+			case "schema":
+				return `writeSchemaValue(${value}, ${encoder});`;
+			case "null":
+			case "undefined":
+				return "";
 		}
 	}
 
@@ -222,6 +242,14 @@ function emitRead(schema: Schema, decoder: string, state: CompileState): ReadFra
 					setup: `const ${pos} = ${decoder}.pos;if (${pos} + 8 > ${decoder}.arr.length) {throw new Error("Unexpected end of array");}${decoder}.pos = ${pos} + 8;const ${value} = ${decoder}.view.getFloat64(${pos}, true);`,
 				};
 			}
+			case "unknown":
+				return { expression: `readUnknown(${decoder})`, setup: "" };
+			case "schema":
+				return { expression: `readSchemaValue(${decoder})`, setup: "" };
+			case "null":
+				return { expression: "null", setup: "" };
+			case "undefined":
+				return { expression: "undefined", setup: "" };
 		}
 	}
 

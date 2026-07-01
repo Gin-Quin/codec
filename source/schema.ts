@@ -7,7 +7,11 @@ export type PrimitiveType =
 	| "boolean"
 	| "date"
 	| "float32"
-	| "float64";
+	| "float64"
+	| "unknown"
+	| "schema"
+	| "null"
+	| "undefined";
 
 /** Primitive schemas that can encode a union variant discriminant. */
 export type UnionDiscriminantType = "string" | "int" | "uint";
@@ -158,6 +162,11 @@ export function optional<Type extends Schema>(schema: Type): OptionalSchema<Type
 	return { _type: "optional", schema };
 }
 
+/** Discovers a schema that can encode and decode the provided runtime value. */
+export function schemaOf(value: unknown): Schema {
+	return discoverSchema(value, new WeakSet<object>());
+}
+
 /** Creates a tagged union schema. */
 export function union<
 	const TagName extends string,
@@ -218,31 +227,35 @@ export function union(
 }
 
 /** Infers the TypeScript value type represented by a schema. */
-export type InferType<T extends Schema> = [T] extends [() => infer S]
-	? S extends Schema
-		? InferType<S>
-		: never
-	: [T] extends [PrimitiveType]
-		? InferPrimitiveType<T & PrimitiveType>
-		: [T] extends [ArraySchema<infer E>]
-			? Array<InferType<E>>
-			: [T] extends [ObjectSchema<infer Properties>]
-				? ExpandObject<InferObjectType<Properties>>
-				: [T] extends [OptionalSchema<infer Type>]
-					? InferType<Type> | undefined
-					: [T] extends [MapSchema<infer Type>]
-						? InferMapType<Type>
-						: [T] extends [BigIntSchema]
-							? bigint
-							: [T] extends [SetSchema<infer Type>]
-								? Set<InferType<Type>>
-								: [T] extends [TupleSchema<infer Elements>]
-									? InferTupleType<Elements>
-									: [T] extends [UnionSchema<infer DiscriminantType, infer Variants, infer TagName>]
-										? InferUnionType<DiscriminantType, Variants, TagName>
-										: [T] extends [UntaggedUnionSchema<infer Variants>]
-											? InferUntaggedUnionType<Variants>
-											: never;
+export type InferType<T extends Schema> = [Schema] extends [T]
+	? unknown
+	: [T] extends [() => infer S]
+		? S extends Schema
+			? InferType<S>
+			: never
+		: [T] extends [PrimitiveType]
+			? InferPrimitiveType<T & PrimitiveType>
+			: [T] extends [ArraySchema<infer E>]
+				? Array<InferType<E>>
+				: [T] extends [ObjectSchema<infer Properties>]
+					? ExpandObject<InferObjectType<Properties>>
+					: [T] extends [OptionalSchema<infer Type>]
+						? InferType<Type> | undefined
+						: [T] extends [MapSchema<infer Type>]
+							? InferMapType<Type>
+							: [T] extends [BigIntSchema]
+								? bigint
+								: [T] extends [SetSchema<infer Type>]
+									? Set<InferType<Type>>
+									: [T] extends [TupleSchema<infer Elements>]
+										? InferTupleType<Elements>
+										: [T] extends [
+													UnionSchema<infer DiscriminantType, infer Variants, infer TagName>,
+												]
+											? InferUnionType<DiscriminantType, Variants, TagName>
+											: [T] extends [UntaggedUnionSchema<infer Variants>]
+												? InferUntaggedUnionType<Variants>
+												: never;
 
 type ExpandObject<Type> = Type extends object ? { [Key in keyof Type]: Type[Key] } : Type;
 
@@ -256,7 +269,15 @@ type InferPrimitiveType<T extends PrimitiveType> = T extends "string"
 				? boolean
 				: T extends "date"
 					? Date
-					: never;
+					: T extends "unknown"
+						? unknown
+						: T extends "schema"
+							? Schema
+							: T extends "null"
+								? null
+								: T extends "undefined"
+									? undefined
+									: never;
 
 type OptionalObjectKey<Properties extends Record<string, Schema>> = {
 	[Key in keyof Properties]: IsOptionalSchema<Properties[Key]> extends true ? Key : never;
@@ -316,3 +337,477 @@ type InferUnionDiscriminantValue<
 type InferUntaggedUnionType<Variants extends readonly Schema[]> = {
 	[Key in keyof Variants]: Variants[Key] extends Schema ? InferType<Variants[Key]> : never;
 }[number];
+
+function discoverSchema(value: unknown, stack: WeakSet<object>): Schema {
+	switch (typeof value) {
+		case "undefined":
+			return "undefined";
+		case "string":
+			return "string";
+		case "boolean":
+			return "boolean";
+		case "bigint":
+			return bigint(Math.max(128, getVarBigIntByteLength(value)));
+		case "number":
+			return discoverNumberSchema(value);
+		case "function":
+		case "symbol":
+			throw new TypeError(`Cannot discover schema for ${typeof value} values`);
+		case "object":
+			if (value === null) {
+				return "null";
+			}
+			return discoverObjectLikeSchema(value, stack);
+	}
+}
+
+function discoverNumberSchema(value: number): PrimitiveType {
+	if (!Number.isSafeInteger(value)) {
+		return "float64";
+	}
+
+	return value >= 0 && !Object.is(value, -0) ? "uint" : "int";
+}
+
+function discoverObjectLikeSchema(value: object, stack: WeakSet<object>): Schema {
+	if (value instanceof Date) {
+		return "date";
+	}
+
+	if (value instanceof Uint8Array) {
+		return "uint8Array";
+	}
+
+	if (stack.has(value)) {
+		throw new TypeError("Cannot discover schema for cyclic values");
+	}
+
+	stack.add(value);
+	try {
+		if (Array.isArray(value)) {
+			return discoverArraySchema(value, stack);
+		}
+
+		if (value instanceof Set) {
+			return discoverSetSchema(value, stack);
+		}
+
+		if (isPlainRecord(value)) {
+			return discoverRecordSchema(value as Record<string, unknown>, stack);
+		}
+	} finally {
+		stack.delete(value);
+	}
+
+	throw new TypeError(`Cannot discover schema for ${getObjectTypeName(value)} values`);
+}
+
+function discoverArraySchema(value: unknown[], stack: WeakSet<object>): ArraySchema<Schema> {
+	let elementSchema: Schema | undefined;
+	for (let index = 0; index < value.length; index++) {
+		elementSchema = joinSchemas(elementSchema, discoverSchema(value[index], stack));
+	}
+	return array(elementSchema ?? "unknown");
+}
+
+function discoverSetSchema(value: Set<unknown>, stack: WeakSet<object>): SetSchema<Schema> {
+	let elementSchema: Schema | undefined;
+	for (const element of value) {
+		elementSchema = joinSchemas(elementSchema, discoverSchema(element, stack));
+	}
+	return set(elementSchema ?? "unknown");
+}
+
+function discoverRecordSchema(
+	value: Record<string, unknown>,
+	stack: WeakSet<object>,
+): ObjectSchema<Record<string, Schema>> {
+	if (
+		Object.getOwnPropertySymbols(value).some((key) =>
+			Object.prototype.propertyIsEnumerable.call(value, key),
+		)
+	) {
+		throw new TypeError("Cannot discover schema for objects with enumerable symbol keys");
+	}
+
+	const fields: Record<string, Schema> = {};
+	const keys = Object.keys(value);
+	for (let index = 0; index < keys.length; index++) {
+		const key = keys[index]!;
+		fields[key] = discoverSchema(value[key], stack);
+	}
+	return object(fields);
+}
+
+function joinSchemas(left: Schema | undefined, right: Schema): Schema {
+	if (!left) {
+		return right;
+	}
+
+	if (schemasEqual(left, right)) {
+		return left;
+	}
+
+	if (left === "unknown" || right === "unknown") {
+		return "unknown";
+	}
+
+	if (left === "undefined") {
+		return optional(right);
+	}
+
+	if (right === "undefined") {
+		return optional(left);
+	}
+
+	if (isOptionalSchemaValue(left)) {
+		return optional(joinSchemas(left.schema, isOptionalSchemaValue(right) ? right.schema : right));
+	}
+
+	if (isOptionalSchemaValue(right)) {
+		return optional(joinSchemas(left, right.schema));
+	}
+
+	if (typeof left === "function" || typeof right === "function") {
+		return schemasEqual(left, right) ? left : "unknown";
+	}
+
+	if (typeof left === "string" || typeof right === "string") {
+		return joinPrimitiveSchemas(left, right);
+	}
+
+	if (left._type !== right._type) {
+		return "unknown";
+	}
+
+	switch (left._type) {
+		case "array":
+			return array(joinSchemas(left.element, (right as ArraySchema<Schema>).element));
+		case "object":
+			return joinObjectSchemas(left, right as ObjectSchema<Record<string, Schema>>);
+		case "map":
+			return map(joinSchemas(left.element, (right as MapSchema<Schema>).element));
+		case "bigint":
+			return bigint(Math.max(left.maxBytes, (right as BigIntSchema).maxBytes));
+		case "set":
+			return set(joinSchemas(left.element, (right as SetSchema<Schema>).element));
+		case "tuple":
+			return joinTupleSchemas(left, right as TupleSchema<Schema[]>);
+		case "union":
+		case "untaggedUnion":
+			return schemasEqual(left, right) ? left : "unknown";
+	}
+}
+
+function joinPrimitiveSchemas(left: Schema, right: Schema): Schema {
+	if (left === right) {
+		return left;
+	}
+
+	if (isIntegerNumberSchema(left) && isIntegerNumberSchema(right)) {
+		return "int";
+	}
+
+	if (isNumberSchema(left) && isNumberSchema(right)) {
+		return "float64";
+	}
+
+	return "unknown";
+}
+
+function joinObjectSchemas(
+	left: ObjectSchema<Record<string, Schema>>,
+	right: ObjectSchema<Record<string, Schema>>,
+): ObjectSchema<Record<string, Schema>> {
+	const fields: Record<string, Schema> = {};
+
+	const leftKeys = Object.keys(left.fields);
+	for (let index = 0; index < leftKeys.length; index++) {
+		const key = leftKeys[index]!;
+		const leftSchema = left.fields[key]!;
+		fields[key] =
+			key in right.fields ? joinSchemas(leftSchema, right.fields[key]!) : optional(leftSchema);
+	}
+
+	const rightKeys = Object.keys(right.fields);
+	for (let index = 0; index < rightKeys.length; index++) {
+		const key = rightKeys[index]!;
+		if (!(key in left.fields)) {
+			fields[key] = optional(right.fields[key]!);
+		}
+	}
+
+	return object(fields);
+}
+
+function joinTupleSchemas(
+	left: TupleSchema<Schema[]>,
+	right: TupleSchema<Schema[]>,
+): TupleSchema<Schema[]> | "unknown" {
+	if (left.elements.length !== right.elements.length) {
+		return "unknown";
+	}
+
+	const elements: Schema[] = new Array(left.elements.length);
+	for (let index = 0; index < left.elements.length; index++) {
+		elements[index] = joinSchemas(left.elements[index]!, right.elements[index]!);
+	}
+	return { _type: "tuple", elements };
+}
+
+function isIntegerNumberSchema(schema: Schema): schema is "int" | "uint" {
+	return schema === "int" || schema === "uint";
+}
+
+function isNumberSchema(schema: Schema): schema is "int" | "uint" | "float32" | "float64" {
+	return isIntegerNumberSchema(schema) || schema === "float32" || schema === "float64";
+}
+
+function isOptionalSchemaValue(schema: Schema): schema is OptionalSchema<Schema> {
+	return typeof schema === "object" && schema !== null && schema._type === "optional";
+}
+
+function isPlainRecord(value: object): boolean {
+	const prototype = Object.getPrototypeOf(value);
+	return prototype === Object.prototype || prototype === null;
+}
+
+function getObjectTypeName(value: object): string {
+	return Object.prototype.toString.call(value).slice(8, -1);
+}
+
+function getVarBigIntByteLength(value: bigint): number {
+	if (value < 0n) {
+		value = -value;
+	}
+
+	let byteLength = 1;
+	value >>= 6n;
+	while (value > 0n) {
+		byteLength++;
+		value >>= 7n;
+	}
+
+	return byteLength;
+}
+
+/** Returns true when a value is a concrete, serializable schema object. */
+export function isSchema(value: unknown): value is Schema {
+	return isConcreteSchema(value, new WeakSet<object>());
+}
+
+function isConcreteSchema(value: unknown, stack: WeakSet<object>): value is Schema {
+	if (typeof value === "string") {
+		return isPrimitiveType(value);
+	}
+
+	if (typeof value !== "object" || value === null || stack.has(value)) {
+		return false;
+	}
+
+	stack.add(value);
+	try {
+		const candidate = value as { _type?: unknown };
+		switch (candidate._type) {
+			case "array":
+				return isConcreteSchema((candidate as ArraySchema<Schema>).element, stack);
+			case "object":
+				return isSchemaRecord((candidate as ObjectSchema<Record<string, Schema>>).fields, stack);
+			case "optional":
+				return isConcreteSchema((candidate as OptionalSchema<Schema>).schema, stack);
+			case "union":
+				return isUnionSchemaValue(candidate, stack);
+			case "untaggedUnion": {
+				const variants = (candidate as UntaggedUnionSchema<readonly Schema[]>).variants;
+				return (
+					Array.isArray(variants) && variants.every((variant) => isConcreteSchema(variant, stack))
+				);
+			}
+			case "map":
+				return isConcreteSchema((candidate as MapSchema<Schema>).element, stack);
+			case "bigint": {
+				const maxBytes = (candidate as BigIntSchema).maxBytes;
+				return Number.isSafeInteger(maxBytes) && maxBytes >= 1;
+			}
+			case "set":
+				return isConcreteSchema((candidate as SetSchema<Schema>).element, stack);
+			case "tuple": {
+				const elements = (candidate as TupleSchema<Schema[]>).elements;
+				return (
+					Array.isArray(elements) && elements.every((element) => isConcreteSchema(element, stack))
+				);
+			}
+			default:
+				return false;
+		}
+	} finally {
+		stack.delete(value);
+	}
+}
+
+function isPrimitiveType(value: string): value is PrimitiveType {
+	switch (value) {
+		case "string":
+		case "int":
+		case "uint":
+		case "uint8Array":
+		case "boolean":
+		case "date":
+		case "float32":
+		case "float64":
+		case "unknown":
+		case "schema":
+		case "null":
+		case "undefined":
+			return true;
+	}
+	return false;
+}
+
+function isSchemaRecord(value: unknown, stack: WeakSet<object>): value is Record<string, Schema> {
+	if (!value || typeof value !== "object" || Array.isArray(value)) {
+		return false;
+	}
+
+	const entries = Object.values(value);
+	for (let index = 0; index < entries.length; index++) {
+		if (!isConcreteSchema(entries[index], stack)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+function isUnionSchemaValue(
+	value: { _type?: unknown },
+	stack: WeakSet<object>,
+): value is UnionSchema<UnionDiscriminantType, UnionVariantMap, string> {
+	const schema = value as UnionSchema<UnionDiscriminantType, UnionVariantMap, string>;
+	if (
+		typeof schema.tagName !== "string" ||
+		!isUnionDiscriminantType(schema.type) ||
+		!schema.variants ||
+		typeof schema.variants !== "object" ||
+		Array.isArray(schema.variants)
+	) {
+		return false;
+	}
+
+	const variantSchemas = Object.values(schema.variants);
+	for (let index = 0; index < variantSchemas.length; index++) {
+		if (!isSchemaRecord(variantSchemas[index], stack)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+function isUnionDiscriminantType(value: unknown): value is UnionDiscriminantType {
+	return value === "string" || value === "int" || value === "uint";
+}
+
+function schemasEqual(left: Schema, right: Schema): boolean {
+	if (left === right) {
+		return true;
+	}
+
+	if (typeof left === "function" || typeof right === "function") {
+		return false;
+	}
+
+	if (typeof left === "string" || typeof right === "string" || left._type !== right._type) {
+		return false;
+	}
+
+	switch (left._type) {
+		case "array":
+			return schemasEqual(left.element, (right as ArraySchema<Schema>).element);
+		case "object":
+			return schemaRecordsEqual(
+				left.fields,
+				(right as ObjectSchema<Record<string, Schema>>).fields,
+			);
+		case "optional":
+			return schemasEqual(left.schema, (right as OptionalSchema<Schema>).schema);
+		case "union":
+			return unionSchemasEqual(
+				left,
+				right as UnionSchema<UnionDiscriminantType, UnionVariantMap, string>,
+			);
+		case "untaggedUnion": {
+			const rightVariants = (right as UntaggedUnionSchema<readonly Schema[]>).variants;
+			if (left.variants.length !== rightVariants.length) {
+				return false;
+			}
+			for (let index = 0; index < left.variants.length; index++) {
+				if (!schemasEqual(left.variants[index]!, rightVariants[index]!)) {
+					return false;
+				}
+			}
+			return true;
+		}
+		case "map":
+			return schemasEqual(left.element, (right as MapSchema<Schema>).element);
+		case "bigint":
+			return left.maxBytes === (right as BigIntSchema).maxBytes;
+		case "set":
+			return schemasEqual(left.element, (right as SetSchema<Schema>).element);
+		case "tuple": {
+			const rightElements = (right as TupleSchema<Schema[]>).elements;
+			if (left.elements.length !== rightElements.length) {
+				return false;
+			}
+			for (let index = 0; index < left.elements.length; index++) {
+				if (!schemasEqual(left.elements[index]!, rightElements[index]!)) {
+					return false;
+				}
+			}
+			return true;
+		}
+	}
+}
+
+function schemaRecordsEqual(left: Record<string, Schema>, right: Record<string, Schema>): boolean {
+	const leftKeys = Object.keys(left);
+	const rightKeys = Object.keys(right);
+	if (leftKeys.length !== rightKeys.length) {
+		return false;
+	}
+
+	for (const key of leftKeys) {
+		if (!(key in right) || !schemasEqual(left[key]!, right[key]!)) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+function unionSchemasEqual(
+	left: UnionSchema<UnionDiscriminantType, UnionVariantMap, string>,
+	right: UnionSchema<UnionDiscriminantType, UnionVariantMap, string>,
+): boolean {
+	return (
+		left.tagName === right.tagName &&
+		left.type === right.type &&
+		unionVariantMapsEqual(left.variants, right.variants)
+	);
+}
+
+function unionVariantMapsEqual(left: UnionVariantMap, right: UnionVariantMap): boolean {
+	const leftKeys = Object.keys(left);
+	const rightKeys = Object.keys(right);
+	if (leftKeys.length !== rightKeys.length) {
+		return false;
+	}
+
+	for (const key of leftKeys) {
+		if (!(key in right) || !schemaRecordsEqual(left[key]!, right[key]!)) {
+			return false;
+		}
+	}
+
+	return true;
+}

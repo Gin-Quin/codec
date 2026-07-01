@@ -5,6 +5,8 @@ import {
 	createCodec,
 	createDecoder,
 	createEncoder,
+	decodeSchema,
+	encodeSchema,
 	type InferType,
 	map,
 	object,
@@ -15,6 +17,7 @@ import {
 	readVarInt,
 	readVarUint,
 	type Schema,
+	schemaOf,
 	set,
 	toUint8Array,
 	tuple,
@@ -132,6 +135,44 @@ const wireFormatFixtures: WireFormatFixture[] = [
 		schema: "float64",
 		value: -2.25,
 		expectedBytes: [0, 0, 0, 0, 0, 0, 2, 192],
+	},
+	{
+		name: "primitive schema",
+		schema: "schema",
+		value: object({
+			id: "uint",
+			description: optional("string"),
+		}),
+		expectedBytes: [
+			10, 2, 2, 105, 100, 2, 11, 100, 101, 115, 99, 114, 105, 112, 116, 105, 111, 110, 11, 0,
+		],
+	},
+	{
+		name: "primitive unknown",
+		schema: "unknown",
+		value: {
+			id: 7,
+			label: "ok",
+			tags: ["a", "b"],
+			absent: undefined,
+			none: null,
+		},
+		expectedBytes: [
+			10, 5, 2, 105, 100, 2, 5, 108, 97, 98, 101, 108, 0, 4, 116, 97, 103, 115, 9, 0, 6, 97, 98,
+			115, 101, 110, 116, 20, 4, 110, 111, 110, 101, 19, 7, 2, 111, 107, 2, 1, 97, 1, 98,
+		],
+	},
+	{
+		name: "primitive null",
+		schema: "null",
+		value: null,
+		expectedBytes: [],
+	},
+	{
+		name: "primitive undefined",
+		schema: "undefined",
+		value: undefined,
+		expectedBytes: [],
 	},
 	{
 		name: "bigint schema",
@@ -501,6 +542,102 @@ describe("signature codec", () => {
 				expectWireFixtureDecodedValue(fixture, codec.decode(createDecoder(expectedBytes)));
 			});
 		}
+	});
+
+	test("unknown schema discovers and round-trips runtime values", () => {
+		const codec = createCodec("unknown");
+		const values = [
+			undefined,
+			null,
+			"hello",
+			-42,
+			42,
+			1.25,
+			true,
+			new Date("2026-06-26T12:34:56.789Z"),
+			new Uint8Array([1, 2, 3]),
+			2n ** 140n,
+			["a", 1, null, undefined],
+			new Set([1, 2, 3]),
+			{
+				id: 7,
+				label: "ok",
+				nested: { enabled: true },
+				missing: undefined,
+			},
+		];
+
+		for (const value of values) {
+			expect(normalizeWireFixtureValue(codec.decode(codec.encode(value)))).toEqual(
+				normalizeWireFixtureValue(value),
+			);
+		}
+
+		expect(Object.is(codec.decode(codec.encode(-0)), -0)).toBe(true);
+
+		type UnknownValue = InferType<"unknown">;
+		const unknownValue: UnknownValue = { anything: ["can", "go", 1] };
+		expect(normalizeWireFixtureValue(codec.decode(codec.encode(unknownValue)))).toEqual(
+			normalizeWireFixtureValue(unknownValue),
+		);
+	});
+
+	test("schemaOf joins discovered schemas for collections", () => {
+		expect(schemaOf([1, -2, 3])).toEqual(array("int"));
+		expect(schemaOf([1, 2.5])).toEqual(array("float64"));
+		expect(schemaOf(["a", 1])).toEqual(array("unknown"));
+		expect(schemaOf([undefined, 1])).toEqual(array(optional("uint")));
+		expect(schemaOf(new Set([1, 2, 3]))).toEqual(set("uint"));
+		expect(schemaOf([{ name: "Ada" }, { name: "Bob", age: 37 }])).toEqual(
+			array(
+				object({
+					name: "string",
+					age: optional("uint"),
+				}),
+			),
+		);
+
+		expect(() => schemaOf(() => undefined)).toThrow("Cannot discover schema for function values");
+
+		const cyclic: any = {};
+		cyclic.self = cyclic;
+		expect(() => schemaOf(cyclic)).toThrow("Cannot discover schema for cyclic values");
+	});
+
+	test("schema values can be encoded, decoded, and reused", () => {
+		const valueSchema = object({
+			items: array(
+				object({
+					id: "uint",
+					label: optional("string"),
+					payload: "unknown",
+				}),
+			),
+			meta: "schema",
+		});
+		const encodedSchema = encodeSchema(valueSchema);
+		const decodedSchema = decodeSchema(encodedSchema);
+		const schemaCodec = createCodec("schema");
+
+		expect(decodedSchema).toEqual(valueSchema);
+		expect(schemaCodec.decode(schemaCodec.encode(valueSchema))).toEqual(valueSchema);
+
+		const valueCodec = createCodec(decodedSchema);
+		const value = {
+			items: [
+				{ id: 1, label: "one", payload: { ok: true } },
+				{ id: 2, label: undefined, payload: [1, "two"] },
+			],
+			meta: "string" as Schema,
+		};
+
+		expect(normalizeWireFixtureValue(valueCodec.decode(valueCodec.encode(value)))).toEqual(
+			normalizeWireFixtureValue(value),
+		);
+
+		type SchemaValue = InferType<"schema">;
+		const typedSchema: SchemaValue = object({ id: "uint" });
+		expect(schemaCodec.decode(schemaCodec.encode(typedSchema))).toEqual(typedSchema);
 	});
 
 	test("object type", () => {
