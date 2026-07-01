@@ -319,6 +319,9 @@ mixedCodec.decode(mixedCodec.encode(["item", 42, { label: "important" }]));
 `optional(schema)` encodes a presence byte. Only `undefined` is treated as
 missing.
 
+When used as an object field, `InferType` makes the field optional while keeping
+`undefined` in the value type, for example `{ description?: string | undefined }`.
+
 ```ts
 import { createCodec, object, optional } from "codec";
 

@@ -27,6 +27,20 @@ import {
 	writeVarUint,
 } from "./index";
 
+type Assignable<Actual, Expected> =
+	(<Type>() => Type extends Actual ? 1 : 2) extends <Type>() => Type extends Expected ? 1 : 2
+		? true
+		: false;
+type Equal<Actual, Expected> =
+	Assignable<Actual, Expected> extends true ? Assignable<Expected, Actual> : false;
+type Expect<Type extends true> = Type;
+type ExactOptionalPropertyTypesEnabled = { field?: undefined } extends { field?: never }
+	? false
+	: true;
+type EmptyObject = Record<never, never>;
+type IsOptionalKey<Type, Key extends keyof Type> =
+	EmptyObject extends Pick<Type, Key> ? true : false;
+
 interface WireFormatFixture {
 	name: string;
 	schema: Schema;
@@ -920,16 +934,35 @@ describe("signature codec", () => {
 		});
 
 		const codec = createCodec(schema);
+		type Value = InferType<typeof schema>;
+		type _OptionalFieldsShape = Expect<
+			Equal<Value, { required: string; optional?: number | undefined }>
+		>;
+		type _OptionalFieldIsOptional = Expect<Equal<IsOptionalKey<Value, "optional">, true>>;
+		type _OptionalFieldKeepsUndefined = ExactOptionalPropertyTypesEnabled extends true
+			? Expect<Equal<Required<Pick<Value, "optional">>["optional"], number | undefined>>
+			: true;
+		const lazyOptionalSchema = object({
+			required: "string",
+			optional: () => optional("int"),
+		});
+		type LazyValue = InferType<typeof lazyOptionalSchema>;
+		type _LazyOptionalFieldsShape = Expect<
+			Equal<LazyValue, { required: string; optional?: number | undefined }>
+		>;
 
-		const withOptional = { required: "test", optional: 42 };
+		const withOptional: Value = { required: "test", optional: 42 };
 		const encodedWith = codec.encode(withOptional);
 		const decodedWith = codec.decode(encodedWith);
 		expect(decodedWith).toEqual(withOptional);
 
-		const withoutOptional = { required: "test", optional: undefined };
+		const withoutOptional: Value = { required: "test" };
 		const encodedWithout = codec.encode(withoutOptional);
 		const decodedWithout = codec.decode(encodedWithout);
-		expect(decodedWithout).toEqual(withoutOptional);
+		expect(decodedWithout).toEqual({ required: "test", optional: undefined });
+
+		const explicitUndefined: Value = { required: "test", optional: undefined };
+		expect(codec.decode(codec.encode(explicitUndefined))).toEqual(explicitUndefined);
 	});
 
 	test("union with int discriminant", () => {

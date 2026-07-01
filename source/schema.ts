@@ -258,8 +258,24 @@ type InferPrimitiveType<T extends PrimitiveType> = T extends "string"
 					? Date
 					: never;
 
+type OptionalObjectKey<Properties extends Record<string, Schema>> = {
+	[Key in keyof Properties]: IsOptionalSchema<Properties[Key]> extends true ? Key : never;
+}[keyof Properties];
+
+type IsOptionalSchema<Type extends Schema> = [Type] extends [OptionalSchema<Schema>]
+	? true
+	: [Type] extends [() => infer Resolved]
+		? Resolved extends Schema
+			? IsOptionalSchema<Resolved>
+			: false
+		: false;
+
 type InferObjectType<Properties extends Record<string, Schema>> = {
-	-readonly [Key in keyof Properties]: InferType<Properties[Key]>;
+	-readonly [Key in Exclude<keyof Properties, OptionalObjectKey<Properties>>]: InferType<
+		Properties[Key]
+	>;
+} & {
+	-readonly [Key in OptionalObjectKey<Properties>]?: InferType<Properties[Key]>;
 };
 
 type InferMapType<Type extends Schema> = {
@@ -278,13 +294,13 @@ type InferUnionType<
 	[Key in keyof Variants]: ExpandObject<
 		{
 			[Tag in TagName]: InferUnionDiscriminantValue<DiscriminantType, Key>;
-		} & {
-			-readonly [K in keyof Variants[Key] as K extends TagName ? never : K]: InferType<
-				Variants[Key][K]
-			>;
-		}
+		} & InferObjectType<OmitObjectKey<Variants[Key], TagName>>
 	>;
 }[keyof Variants];
+
+type OmitObjectKey<Properties extends Record<string, Schema>, OmittedKey extends string> = {
+	-readonly [Key in keyof Properties as Key extends OmittedKey ? never : Key]: Properties[Key];
+};
 
 type InferUnionDiscriminantValue<
 	DiscriminantType extends UnionDiscriminantType,
