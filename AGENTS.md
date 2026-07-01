@@ -1,2 +1,3 @@
 - Read ./README.md
 - When running benchmarks, do not use "--table" parameter (it's intended for humans)
+- When adding new schema types, update the wire-format fixture tests to cover them

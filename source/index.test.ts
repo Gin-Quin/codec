@@ -14,6 +14,7 @@ import {
 	readVarBigInt,
 	readVarInt,
 	readVarUint,
+	type Schema,
 	set,
 	toUint8Array,
 	tuple,
@@ -25,6 +26,251 @@ import {
 	writeVarInt,
 	writeVarUint,
 } from "./index";
+
+interface WireFormatFixture {
+	name: string;
+	schema: Schema;
+	value: any;
+	expectedBytes: number[];
+	assertDecoded?: (decoded: any) => void;
+}
+
+type WireRecursiveSchema = UnionSchema<
+	"type",
+	{
+		number: { number: "int" };
+		child: { child: () => WireRecursiveSchema };
+	}
+>;
+
+const wireRecursiveSchema: WireRecursiveSchema = union("type", "string", {
+	number: { number: "int" },
+	child: { child: (): WireRecursiveSchema => wireRecursiveSchema },
+});
+
+// Golden wire-format fixtures: update these only for intentional breaking format changes.
+const wireFormatFixtures: WireFormatFixture[] = [
+	{
+		name: "primitive string ascii",
+		schema: "string",
+		value: "hello",
+		expectedBytes: [5, 104, 101, 108, 108, 111],
+	},
+	{
+		name: "primitive string utf8",
+		schema: "string",
+		value: "hello café 🚀",
+		expectedBytes: [16, 104, 101, 108, 108, 111, 32, 99, 97, 102, 195, 169, 32, 240, 159, 154, 128],
+	},
+	{
+		name: "primitive int negative",
+		schema: "int",
+		value: -42,
+		expectedBytes: [106],
+	},
+	{
+		name: "primitive int negative zero",
+		schema: "int",
+		value: -0,
+		expectedBytes: [64],
+		assertDecoded: (decoded) => {
+			expect(Object.is(decoded, -0)).toBe(true);
+		},
+	},
+	{
+		name: "primitive uint multibyte",
+		schema: "uint",
+		value: 300,
+		expectedBytes: [172, 2],
+	},
+	{
+		name: "primitive uint8Array",
+		schema: "uint8Array",
+		value: new Uint8Array([0, 1, 127, 128, 255]),
+		expectedBytes: [5, 0, 1, 127, 128, 255],
+	},
+	{
+		name: "primitive boolean true",
+		schema: "boolean",
+		value: true,
+		expectedBytes: [1],
+	},
+	{
+		name: "primitive boolean false",
+		schema: "boolean",
+		value: false,
+		expectedBytes: [0],
+	},
+	{
+		name: "primitive date",
+		schema: "date",
+		value: new Date("2024-01-02T03:04:05.678Z"),
+		expectedBytes: [0, 224, 178, 13, 130, 204, 120, 66],
+	},
+	{
+		name: "primitive float32",
+		schema: "float32",
+		value: 1.5,
+		expectedBytes: [0, 0, 192, 63],
+	},
+	{
+		name: "primitive float64",
+		schema: "float64",
+		value: -2.25,
+		expectedBytes: [0, 0, 0, 0, 0, 0, 2, 192],
+	},
+	{
+		name: "bigint schema",
+		schema: bigint(),
+		value: -(2n ** 70n + 5n),
+		expectedBytes: [197, 128, 128, 128, 128, 128, 128, 128, 128, 128, 2],
+	},
+	{
+		name: "composed array",
+		schema: array("int"),
+		value: [-1, 0, 1, 64],
+		expectedBytes: [4, 65, 0, 1, 128, 1],
+	},
+	{
+		name: "composed object",
+		schema: object({
+			id: "uint",
+			label: "string",
+			active: "boolean",
+		}),
+		value: { id: 7, label: "ok", active: true },
+		expectedBytes: [7, 2, 111, 107, 1],
+	},
+	{
+		name: "composed optional present",
+		schema: optional("string"),
+		value: "yes",
+		expectedBytes: [1, 3, 121, 101, 115],
+	},
+	{
+		name: "composed optional absent",
+		schema: optional("string"),
+		value: undefined,
+		expectedBytes: [0],
+	},
+	{
+		name: "composed union string discriminant",
+		schema: union("kind", "string", {
+			user: { name: "string", age: "int" },
+			product: { title: "string", price: "uint" },
+		}),
+		value: { kind: "user", name: "Ada", age: 37 },
+		expectedBytes: [4, 117, 115, 101, 114, 3, 65, 100, 97, 37],
+	},
+	{
+		name: "composed union uint discriminant",
+		schema: union("type", "uint", {
+			0: { x: "string" },
+			1: { y: "uint" },
+		}),
+		value: { type: 1, y: 300 },
+		expectedBytes: [1, 172, 2],
+	},
+	{
+		name: "composed union int discriminant",
+		schema: union("kind", "int", {
+			"-1": { error: "string" },
+			2: { ok: "boolean" },
+		}),
+		value: { kind: -1, error: "no" },
+		expectedBytes: [65, 2, 110, 111],
+	},
+	{
+		name: "composed map",
+		schema: map("uint"),
+		value: { alpha: 1, beta: 300 },
+		expectedBytes: [2, 5, 97, 108, 112, 104, 97, 1, 4, 98, 101, 116, 97, 172, 2],
+	},
+	{
+		name: "composed set",
+		schema: set("string"),
+		value: new Set(["a", "bc"]),
+		expectedBytes: [2, 1, 97, 2, 98, 99],
+	},
+	{
+		name: "composed tuple",
+		schema: tuple("string", "int", "boolean"),
+		value: ["x", -2, false],
+		expectedBytes: [1, 120, 66, 0],
+	},
+	{
+		name: "lazy schema",
+		schema: () =>
+			object({
+				name: "string",
+				count: "uint",
+			}),
+		value: { name: "lazy", count: 2 },
+		expectedBytes: [4, 108, 97, 122, 121, 2],
+	},
+	{
+		name: "recursive lazy schema",
+		schema: wireRecursiveSchema,
+		value: { type: "child", child: { type: "number", number: 42 } },
+		expectedBytes: [5, 99, 104, 105, 108, 100, 6, 110, 117, 109, 98, 101, 114, 42],
+	},
+	{
+		name: "nested composed schema",
+		schema: object({
+			tags: array("string"),
+			counts: map("uint"),
+			flags: set("boolean"),
+			range: tuple("int", "int"),
+			maybe: optional("date"),
+		}),
+		value: {
+			tags: ["a", "é"],
+			counts: { one: 1, big: 300 },
+			flags: new Set([true, false]),
+			range: [-5, 5],
+			maybe: new Date("2024-01-01T00:00:00.000Z"),
+		},
+		expectedBytes: [
+			2, 1, 97, 2, 195, 169, 2, 3, 111, 110, 101, 1, 3, 98, 105, 103, 172, 2, 2, 1, 0, 69, 5, 1, 0,
+			0, 64, 31, 37, 204, 120, 66,
+		],
+	},
+];
+
+function normalizeWireFixtureValue(value: any): any {
+	if (value instanceof Uint8Array) {
+		return Array.from(value);
+	}
+
+	if (value instanceof Date) {
+		return value.toISOString();
+	}
+
+	if (value instanceof Set) {
+		return Array.from(value, normalizeWireFixtureValue);
+	}
+
+	if (Array.isArray(value)) {
+		return value.map(normalizeWireFixtureValue);
+	}
+
+	if (value !== null && typeof value === "object") {
+		return Object.fromEntries(
+			Object.entries(value).map(([key, entry]) => [key, normalizeWireFixtureValue(entry)]),
+		);
+	}
+
+	return value;
+}
+
+function expectWireFixtureDecodedValue(fixture: WireFormatFixture, decoded: any): void {
+	if (fixture.assertDecoded) {
+		fixture.assertDecoded(decoded);
+		return;
+	}
+
+	expect(normalizeWireFixtureValue(decoded)).toEqual(normalizeWireFixtureValue(fixture.value));
+}
 
 describe("signature codec", () => {
 	test("primitive types", () => {
@@ -204,6 +450,19 @@ describe("signature codec", () => {
 		const decoder = createDecoder(encoded);
 		expect(readFloat32(decoder)).toBe(1.5);
 		expect(readFloat64(decoder)).toBe(-2.25);
+	});
+
+	describe("wire format fixtures", () => {
+		for (const fixture of wireFormatFixtures) {
+			test(fixture.name, () => {
+				const codec = createCodec(fixture.schema);
+				const expectedBytes = new Uint8Array(fixture.expectedBytes);
+
+				expect(codec.encode(fixture.value)).toEqual(expectedBytes);
+				expectWireFixtureDecodedValue(fixture, codec.decode(expectedBytes));
+				expectWireFixtureDecodedValue(fixture, codec.decode(createDecoder(expectedBytes)));
+			});
+		}
 	});
 
 	test("object type", () => {
