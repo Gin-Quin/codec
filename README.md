@@ -139,15 +139,19 @@ Supported primitive schemas are:
 - `"string"`: UTF-8 string with a variable-length byte length prefix
 - `"int"`: signed safe integer, ZigZag encoded and then variable-length encoded
 - `"uint"`: unsigned safe integer, variable-length encoded
-- `"uint8Array"`: byte array with a variable-length byte length prefix
-- `"boolean"`: one byte, `0` or `1`
-- `"date"`: JavaScript `Date`, encoded as its millisecond timestamp; invalid dates are rejected
+- `"int32"`: signed fixed-size integer, decoded as a JavaScript `number`
+- `"uint32"`: unsigned fixed-size integer, decoded as a JavaScript `number`
+- `"int64"`: signed fixed-size integer, decoded as a JavaScript `number`
+- `"uint64"`: unsigned fixed-size integer, decoded as a JavaScript `number`
 - `"float32"`: 32-bit floating-point number, fixed-width little-endian encoded
 - `"float64"`: 64-bit floating-point number, fixed-width little-endian encoded
-- `"unknown"`: prefixes each value with a discovered schema, then encodes the value with that schema
-- `"schema"`: encodes and decodes concrete schema values
+- `"boolean"`: one byte, `0` or `1`
 - `"null"`: the literal `null` value
 - `"undefined"`: the literal `undefined` value
+- `"date"`: JavaScript `Date`, encoded as its millisecond timestamp; invalid dates are rejected
+- `"uint8Array"`: byte array with a variable-length byte length prefix
+- `"unknown"`: prefixes each value with a discovered schema, then encodes the value with that schema
+- `"schema"`: encodes and decodes concrete schema values
 
 ```ts
 const stringCodec = createCodec("string");
@@ -158,6 +162,12 @@ intCodec.decode(intCodec.encode(-42));
 
 const uintCodec = createCodec("uint");
 uintCodec.decode(uintCodec.encode(42));
+
+const int32Codec = createCodec("int32");
+int32Codec.decode(int32Codec.encode(-42));
+
+const uint64Codec = createCodec("uint64");
+uint64Codec.decode(uint64Codec.encode(42));
 
 const bytesCodec = createCodec("uint8Array");
 bytesCodec.decode(bytesCodec.encode(new Uint8Array([1, 2, 3])));
@@ -190,6 +200,10 @@ first maps signed integers with ZigZag encoding (`0 -> 0`, `-1 -> 1`,
 `1 -> 2`, `-2 -> 3`) and then writes the result as a `uint` varint. As in
 Protocol Buffers, `-0` is canonicalized to `0`.
 
+Use `"int32"`, `"uint32"`, `"int64"`, or `"uint64"` when faster fixed-size
+integer encoding and decoding matters more than compact output. They avoid the
+varint loop, but small values usually take more bytes than `"int"` or `"uint"`.
+
 ### Unknown Values and Schema Values
 
 Use `"unknown"` when the encoder should discover the schema from the value at
@@ -218,7 +232,13 @@ Use `"schema"` or the `encodeSchema` and `decodeSchema` helpers to send schemas
 as data. Concrete schemas round-trip; lazy schema functions are not serializable.
 
 ```ts
-import { createCodec, decodeSchema, encodeSchema, object, optional } from "codec";
+import {
+	createCodec,
+	decodeSchema,
+	encodeSchema,
+	object,
+	optional,
+} from "codec";
 
 const userSchema = object({
 	id: "uint",

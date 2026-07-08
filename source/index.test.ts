@@ -109,8 +109,32 @@ const wireFormatFixtures: WireFormatFixture[] = [
 		},
 	},
 	{
+		name: "primitive int32 negative",
+		schema: "int32",
+		value: -42,
+		expectedBytes: [83],
+	},
+	{
+		name: "primitive int64 negative multibyte",
+		schema: "int64",
+		value: -300,
+		expectedBytes: [215, 4],
+	},
+	{
 		name: "primitive uint multibyte",
 		schema: "uint",
+		value: 300,
+		expectedBytes: [172, 2],
+	},
+	{
+		name: "primitive uint32 multibyte",
+		schema: "uint32",
+		value: 300,
+		expectedBytes: [172, 2],
+	},
+	{
+		name: "primitive uint64 multibyte",
+		schema: "uint64",
 		value: 300,
 		expectedBytes: [172, 2],
 	},
@@ -162,6 +186,17 @@ const wireFormatFixtures: WireFormatFixture[] = [
 		],
 	},
 	{
+		name: "primitive schema new integer aliases",
+		schema: "schema",
+		value: object({
+			a: "int32",
+			b: "uint32",
+			c: "int64",
+			d: "uint64",
+		}),
+		expectedBytes: [10, 4, 1, 97, 24, 1, 98, 25, 1, 99, 26, 1, 100, 27],
+	},
+	{
 		name: "primitive unknown",
 		schema: "unknown",
 		value: {
@@ -199,6 +234,18 @@ const wireFormatFixtures: WireFormatFixture[] = [
 		schema: "schema",
 		value: literal(12),
 		expectedBytes: [21, 2, 12],
+	},
+	{
+		name: "literal null schema value",
+		schema: "schema",
+		value: literal(null),
+		expectedBytes: [22],
+	},
+	{
+		name: "literal undefined schema value",
+		schema: "schema",
+		value: literal(undefined),
+		expectedBytes: [23],
 	},
 	{
 		name: "bigint schema",

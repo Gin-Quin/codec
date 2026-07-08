@@ -32,7 +32,7 @@ import {
 	writeUnknown,
 	writeUntaggedUnion,
 } from "./dynamic";
-import { literalValuesEqual, type Schema } from "./schema";
+import { type IntegerPrimitiveType, literalValuesEqual, type Schema } from "./schema";
 
 type WriteFunction = (encoder: Encoder, value: any) => void;
 type ReadFunction = (decoder: Decoder) => any;
@@ -130,8 +130,12 @@ function emitWrite(schema: Schema, value: string, encoder: string, state: Compil
 			case "string":
 				return `writeVarString(${encoder}, ${value});`;
 			case "int":
+			case "int32":
+			case "int64":
 				return `writeVarInt(${encoder}, ${value});`;
 			case "uint":
+			case "uint32":
+			case "uint64":
 				return `writeVarUint(${encoder}, ${value});`;
 			case "uint8Array":
 				return `writeVarUint8Array(${encoder}, ${value});`;
@@ -230,8 +234,12 @@ function emitRead(schema: Schema, decoder: string, state: CompileState): ReadFra
 			case "string":
 				return { expression: `readVarString(${decoder})`, setup: "" };
 			case "int":
+			case "int32":
+			case "int64":
 				return { expression: `readVarInt(${decoder})`, setup: "" };
 			case "uint":
+			case "uint32":
+			case "uint64":
 				return { expression: `readVarUint(${decoder})`, setup: "" };
 			case "uint8Array":
 				return { expression: `readVarUint8Array(${decoder})`, setup: "" };
@@ -373,6 +381,6 @@ function createId(prefix: string, state: CompileState): string {
 	return `${prefix}${state.nextId++}`;
 }
 
-function variantLiteral(type: "string" | "int" | "uint", variant: string): string {
+function variantLiteral(type: "string" | IntegerPrimitiveType, variant: string): string {
 	return type === "string" ? JSON.stringify(variant) : String(Number(variant));
 }

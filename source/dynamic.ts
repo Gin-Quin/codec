@@ -64,6 +64,12 @@ enum SchemaTag {
 	Null = 19,
 	Undefined = 20,
 	Literal = 21,
+	LiteralNull = 22,
+	LiteralUndefined = 23,
+	Int32 = 24,
+	Uint32 = 25,
+	Int64 = 26,
+	Uint64 = 27,
 }
 
 /** Writes a value using a schema without precompiling a codec. */
@@ -78,9 +84,13 @@ export function writeSchema(schema: Schema, value: any, encoder: Encoder): void 
 				writeVarString(encoder, value);
 				break;
 			case "int":
+			case "int32":
+			case "int64":
 				writeVarInt(encoder, value);
 				break;
 			case "uint":
+			case "uint32":
+			case "uint64":
 				writeVarUint(encoder, value);
 				break;
 			case "uint8Array":
@@ -263,8 +273,7 @@ export function writeSchemaValue(schema: Schema, encoder: Encoder): void {
 
 	switch (schema._type) {
 		case "literal":
-			writeUint8(encoder, SchemaTag.Literal);
-			writeUnknown(schema.value, encoder);
+			writeLiteralSchemaValue(schema, encoder);
 			break;
 		case "array":
 			writeUint8(encoder, SchemaTag.Array);
@@ -330,8 +339,20 @@ function writePrimitiveSchemaValue(schema: PrimitiveType, encoder: Encoder): voi
 		case "int":
 			writeUint8(encoder, SchemaTag.Int);
 			break;
+		case "int32":
+			writeUint8(encoder, SchemaTag.Int32);
+			break;
+		case "int64":
+			writeUint8(encoder, SchemaTag.Int64);
+			break;
 		case "uint":
 			writeUint8(encoder, SchemaTag.Uint);
+			break;
+		case "uint32":
+			writeUint8(encoder, SchemaTag.Uint32);
+			break;
+		case "uint64":
+			writeUint8(encoder, SchemaTag.Uint64);
 			break;
 		case "uint8Array":
 			writeUint8(encoder, SchemaTag.Uint8Array);
@@ -365,6 +386,21 @@ function writePrimitiveSchemaValue(schema: PrimitiveType, encoder: Encoder): voi
 	}
 }
 
+function writeLiteralSchemaValue(schema: LiteralSchema<unknown>, encoder: Encoder): void {
+	if (schema.value === null) {
+		writeUint8(encoder, SchemaTag.LiteralNull);
+		return;
+	}
+
+	if (schema.value === undefined) {
+		writeUint8(encoder, SchemaTag.LiteralUndefined);
+		return;
+	}
+
+	writeUint8(encoder, SchemaTag.Literal);
+	writeUnknown(schema.value, encoder);
+}
+
 function writeSchemaFields(fields: Record<string, Schema>, encoder: Encoder): void {
 	const keys = Object.keys(fields);
 	writeVarUint(encoder, keys.length);
@@ -383,8 +419,16 @@ export function readSchemaValue(decoder: Decoder): Schema {
 			return "string";
 		case SchemaTag.Int:
 			return "int";
+		case SchemaTag.Int32:
+			return "int32";
+		case SchemaTag.Int64:
+			return "int64";
 		case SchemaTag.Uint:
 			return "uint";
+		case SchemaTag.Uint32:
+			return "uint32";
+		case SchemaTag.Uint64:
+			return "uint64";
 		case SchemaTag.Uint8Array:
 			return "uint8Array";
 		case SchemaTag.Boolean:
@@ -423,6 +467,10 @@ export function readSchemaValue(decoder: Decoder): Schema {
 			return "undefined";
 		case SchemaTag.Literal:
 			return literalSchema(readUnknown(decoder));
+		case SchemaTag.LiteralNull:
+			return literalSchema(null);
+		case SchemaTag.LiteralUndefined:
+			return literalSchema(undefined);
 		default:
 			throw new Error(`Unknown schema tag: ${tag}`);
 	}
@@ -453,7 +501,15 @@ function readUnionSchemaValue(
 
 function readUnionDiscriminantSchemaValue(decoder: Decoder): UnionDiscriminantType {
 	const schema = readSchemaValue(decoder);
-	if (schema === "string" || schema === "int" || schema === "uint") {
+	if (
+		schema === "string" ||
+		schema === "int" ||
+		schema === "uint" ||
+		schema === "int32" ||
+		schema === "uint32" ||
+		schema === "int64" ||
+		schema === "uint64"
+	) {
 		return schema;
 	}
 
@@ -529,8 +585,12 @@ function readPrimitive<P extends PrimitiveType>(type: P, decoder: Decoder): any 
 		case "string":
 			return readVarString(decoder);
 		case "int":
+		case "int32":
+		case "int64":
 			return readVarInt(decoder);
 		case "uint":
+		case "uint32":
+		case "uint64":
 			return readVarUint(decoder);
 		case "uint8Array":
 			return readVarUint8Array(decoder);
@@ -747,8 +807,12 @@ function matchesPrimitive(schema: PrimitiveType, value: any): boolean {
 		case "string":
 			return typeof value === "string";
 		case "int":
+		case "int32":
+		case "int64":
 			return Number.isSafeInteger(value);
 		case "uint":
+		case "uint32":
+		case "uint64":
 			return Number.isSafeInteger(value) && value >= 0;
 		case "uint8Array":
 			return value instanceof Uint8Array;

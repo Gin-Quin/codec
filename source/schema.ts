@@ -2,7 +2,11 @@
 export type PrimitiveType =
 	| "string"
 	| "int"
+	| "int32"
+	| "int64"
 	| "uint"
+	| "uint32"
+	| "uint64"
 	| "uint8Array"
 	| "boolean"
 	| "date"
@@ -14,7 +18,10 @@ export type PrimitiveType =
 	| "undefined";
 
 /** Primitive schemas that can encode a union variant discriminant. */
-export type UnionDiscriminantType = "string" | "int" | "uint";
+export type IntegerPrimitiveType = "int" | "uint" | "int32" | "uint32" | "int64" | "uint64";
+
+/** Primitive schemas that can encode a union variant discriminant. */
+export type UnionDiscriminantType = "string" | IntegerPrimitiveType;
 
 type UnionVariantMap = Record<string | number, Record<string, Schema>>;
 
@@ -276,7 +283,7 @@ type ExpandObject<Type> = Type extends object ? { [Key in keyof Type]: Type[Key]
 
 type InferPrimitiveType<T extends PrimitiveType> = T extends "string"
 	? string
-	: T extends "int" | "uint" | "float32" | "float64"
+	: T extends IntegerPrimitiveType | "float32" | "float64"
 		? number
 		: T extends "uint8Array"
 			? Uint8Array
@@ -574,11 +581,18 @@ function joinTupleSchemas(
 	return { _type: "tuple", elements };
 }
 
-function isIntegerNumberSchema(schema: Schema): schema is "int" | "uint" {
-	return schema === "int" || schema === "uint";
+function isIntegerNumberSchema(schema: Schema): schema is IntegerPrimitiveType {
+	return (
+		schema === "int" ||
+		schema === "uint" ||
+		schema === "int32" ||
+		schema === "uint32" ||
+		schema === "int64" ||
+		schema === "uint64"
+	);
 }
 
-function isNumberSchema(schema: Schema): schema is "int" | "uint" | "float32" | "float64" {
+function isNumberSchema(schema: Schema): schema is IntegerPrimitiveType | "float32" | "float64" {
 	return isIntegerNumberSchema(schema) || schema === "float32" || schema === "float64";
 }
 
@@ -670,7 +684,11 @@ function isPrimitiveType(value: string): value is PrimitiveType {
 	switch (value) {
 		case "string":
 		case "int":
+		case "int32":
+		case "int64":
 		case "uint":
+		case "uint32":
+		case "uint64":
 		case "uint8Array":
 		case "boolean":
 		case "date":
@@ -726,7 +744,15 @@ function isUnionSchemaValue(
 }
 
 function isUnionDiscriminantType(value: unknown): value is UnionDiscriminantType {
-	return value === "string" || value === "int" || value === "uint";
+	return (
+		value === "string" ||
+		value === "int" ||
+		value === "uint" ||
+		value === "int32" ||
+		value === "uint32" ||
+		value === "int64" ||
+		value === "uint64"
+	);
 }
 
 function schemasEqual(left: Schema, right: Schema): boolean {
