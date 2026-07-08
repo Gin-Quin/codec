@@ -1,8 +1,8 @@
-const bit7 = 0b0100_0000;
 const bit8 = 0b1000_0000;
-const bits6 = 0b0011_1111;
 const bits7 = 0b0111_1111;
 const defaultBufferSize = 128;
+const minInt32 = -0x8000_0000;
+const maxInt32 = 0x7fff_ffff;
 const maxUint32 = 0xffff_ffff;
 const maxDirectAsciiStringSize = 64;
 const textEncoder = new TextEncoder();
@@ -279,52 +279,23 @@ function readVarUintSlow(decoder: Decoder, value: number, multiplier: number): n
 	throw new Error("Unexpected end of array");
 }
 
-/** Writes a signed safe integer using variable-length encoding. */
+/** Writes a signed safe integer as ZigZag plus unsigned variable-length encoding. */
 export function writeVarInt(encoder: Encoder, value: number): void {
-	const isNegative = value !== 0 ? value < 0 : 1 / value < 0;
-	if (isNegative) {
-		value = -value;
-	}
-
-	if (value <= bits6) {
-		ensureCapacity(encoder, 1);
-		encoder.buffer[encoder.pos++] = (isNegative ? bit7 : 0) | value;
+	if (value >= minInt32 && value <= maxInt32) {
+		writeVarUint(encoder, ((value << 1) ^ (value >> 31)) >>> 0);
 		return;
 	}
 
-	if (value <= maxUint32) {
-		ensureCapacity(encoder, 5);
-		const buffer = encoder.buffer;
-		let pos = encoder.pos;
-		let remaining = value >>> 0;
-
-		buffer[pos++] = (remaining > bits6 ? bit8 : 0) | (isNegative ? bit7 : 0) | (remaining & bits6);
-		remaining >>>= 6;
-
-		while (remaining > 0) {
-			buffer[pos++] = (remaining > bits7 ? bit8 : 0) | (remaining & bits7);
-			remaining >>>= 7;
-		}
-
-		encoder.pos = pos;
-		return;
+	let remaining = value >= 0 ? BigInt(value) << 1n : (BigInt(-value) << 1n) - 1n;
+	while (remaining > 0x7fn) {
+		writeUint8(encoder, bit8 | Number(remaining & 0x7fn));
+		remaining >>= 7n;
 	}
 
-	ensureCapacity(encoder, 8);
-	const buffer = encoder.buffer;
-	let pos = encoder.pos;
-	buffer[pos++] = (value > bits6 ? bit8 : 0) | (isNegative ? bit7 : 0) | (bits6 & value);
-	value = Math.floor(value / 64);
-
-	while (value > 0) {
-		buffer[pos++] = (value > bits7 ? bit8 : 0) | (bits7 & value);
-		value = Math.floor(value / 128);
-	}
-
-	encoder.pos = pos;
+	writeUint8(encoder, Number(remaining));
 }
 
-/** Reads a signed safe integer using variable-length encoding. */
+/** Reads a signed safe integer encoded as ZigZag plus unsigned variable-length encoding. */
 export function readVarInt(decoder: Decoder): number {
 	const buffer = decoder.arr;
 	let pos = decoder.pos;
@@ -335,24 +306,10 @@ export function readVarInt(decoder: Decoder): number {
 	}
 
 	let byte = buffer[pos++]!;
-	let value = byte & bits6;
-	const sign = (byte & bit7) > 0 ? -1 : 1;
-
-	if ((byte & bit8) === 0) {
-		decoder.pos = pos;
-		return sign * value;
-	}
-
-	if (pos >= length) {
-		decoder.pos = pos;
-		throw new Error("Unexpected end of array");
-	}
-
-	byte = buffer[pos++]!;
-	value += (byte & bits7) * 0x40;
+	let value = byte & bits7;
 	if (byte < bit8) {
 		decoder.pos = pos;
-		return sign * value;
+		return zigZagDecodeUint32(value);
 	}
 
 	if (pos >= length) {
@@ -361,10 +318,10 @@ export function readVarInt(decoder: Decoder): number {
 	}
 
 	byte = buffer[pos++]!;
-	value += (byte & bits7) * 0x2000;
+	value |= (byte & bits7) << 7;
 	if (byte < bit8) {
 		decoder.pos = pos;
-		return sign * value;
+		return zigZagDecodeUint32(value);
 	}
 
 	if (pos >= length) {
@@ -373,10 +330,10 @@ export function readVarInt(decoder: Decoder): number {
 	}
 
 	byte = buffer[pos++]!;
-	value += (byte & bits7) * 0x10_0000;
+	value |= (byte & bits7) << 14;
 	if (byte < bit8) {
 		decoder.pos = pos;
-		return sign * value;
+		return zigZagDecodeUint32(value);
 	}
 
 	if (pos >= length) {
@@ -385,68 +342,91 @@ export function readVarInt(decoder: Decoder): number {
 	}
 
 	byte = buffer[pos++]!;
-	value += (byte & bits7) * 0x800_0000;
+	value |= (byte & bits7) << 21;
+	if (byte < bit8) {
+		decoder.pos = pos;
+		return zigZagDecodeUint32(value);
+	}
+
+	if (pos >= length) {
+		decoder.pos = pos;
+		throw new Error("Unexpected end of array");
+	}
+
+	byte = buffer[pos++]!;
+	value += (byte & bits7) * 0x1000_0000;
 	decoder.pos = pos;
 	if (byte < bit8) {
-		return sign * value;
+		if (value <= maxUint32) {
+			return zigZagDecodeUint32(value);
+		}
+
+		return zigZagDecodeSafeBigInt(BigInt(value));
 	}
 
-	return readVarIntSlow(decoder, value, 0x4_0000_0000, sign);
+	return readVarIntSlow(decoder, BigInt(value), 35n);
 }
 
-function readVarIntSlow(decoder: Decoder, value: number, multiplier: number, sign: number): number {
+function readVarIntSlow(decoder: Decoder, value: bigint, shift: bigint): number {
 	const length = decoder.arr.length;
 	while (decoder.pos < length) {
 		const byte = decoder.arr[decoder.pos++]!;
-		value += (byte & bits7) * multiplier;
-		multiplier *= 128;
+		value |= BigInt(byte & bits7) << shift;
+		shift += 7n;
 
 		if (byte < bit8) {
-			return sign * value;
-		}
-
-		if (value > Number.MAX_SAFE_INTEGER) {
-			throw new Error("Integer out of range");
+			return zigZagDecodeSafeBigInt(value);
 		}
 	}
 
 	throw new Error("Unexpected end of array");
 }
 
-/** Writes a signed bigint using variable-length encoding. */
+function zigZagDecodeUint32(value: number): number {
+	return ((value >>> 1) ^ -(value & 1)) | 0;
+}
+
+function zigZagDecodeSafeBigInt(value: bigint): number {
+	const decoded = (value & 1n) === 0n ? value >> 1n : -((value >> 1n) + 1n);
+	const result = Number(decoded);
+	if (!Number.isSafeInteger(result)) {
+		throw new Error("Integer out of range");
+	}
+
+	return result;
+}
+
+function zigZagDecodeBigInt(value: bigint): bigint {
+	return (value & 1n) === 0n ? value >> 1n : -((value >> 1n) + 1n);
+}
+
+/** Writes a signed bigint as ZigZag plus unsigned variable-length encoding. */
 export function writeVarBigInt(encoder: Encoder, value: bigint, maxBytes = 128): void {
 	validateMaxBytes(maxBytes);
 
-	const isNegative = value < 0n;
-	if (isNegative) {
-		value = -value;
-	}
-
-	let byte = Number(value & 0x3fn);
-	value >>= 6n;
-	writeUint8(encoder, (value > 0n ? bit8 : 0) | (isNegative ? bit7 : 0) | byte);
+	let remaining = value >= 0n ? value << 1n : (-value << 1n) - 1n;
 	let byteLength = 1;
 
-	while (value > 0n) {
+	while (remaining > 0x7fn) {
 		if (byteLength >= maxBytes) {
 			throw new Error(`BigInt exceeds maxBytes (${maxBytes})`);
 		}
 
-		byte = Number(value & 0x7fn);
-		value >>= 7n;
-		writeUint8(encoder, (value > 0n ? bit8 : 0) | byte);
+		writeUint8(encoder, bit8 | Number(remaining & 0x7fn));
+		remaining >>= 7n;
 		byteLength++;
 	}
+
+	writeUint8(encoder, Number(remaining));
 }
 
-/** Reads a signed bigint using variable-length encoding. */
+/** Reads a signed bigint encoded as ZigZag plus unsigned variable-length encoding. */
 export function readVarBigInt(decoder: Decoder, maxBytes = 128): bigint {
 	validateMaxBytes(maxBytes);
 
 	let byte = readUint8(decoder);
-	let value = BigInt(byte & bits6);
-	const isNegative = (byte & bit7) > 0;
-	let shift = 6n;
+	let value = BigInt(byte & bits7);
+	let shift = 7n;
 	let byteLength = 1;
 
 	while ((byte & bit8) > 0) {
@@ -460,7 +440,7 @@ export function readVarBigInt(decoder: Decoder, maxBytes = 128): bigint {
 		shift += 7n;
 	}
 
-	return isNegative ? -value : value;
+	return zigZagDecodeBigInt(value);
 }
 
 function validateMaxBytes(maxBytes: number): void {

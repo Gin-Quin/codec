@@ -1,6 +1,6 @@
 # Codec Benchmarks
 
-65 rows from 5 cases, generated 6/29/2026, 4:06:06 PM.
+65 rows from 5 cases, generated 7/8/2026, 12:39:02 PM.
 
 Each serializer is tested on the same case payloads over repeated encode and decode runs, using median timings from the saved benchmark report.
 
@@ -10,19 +10,19 @@ Mean values across all benchmark cases.
 
 | Serializer | Format | Bytes | Size vs JSON | Encode µs | Decode µs | Round trip µs | Round trip vs JSON |
 | :-- | :-- | --: | --: | --: | --: | --: | --: |
-| codec 🥇 | codec binary | 🥈 10,414 | 🥈 0.47x | 🥇 19.3 | 🥇 21.1 | 🥇 40.9 | 🥇 0.60x |
-| msgpackr-records 🥈 | MessagePack | 10,724 | 0.49x | 🥉 28.3 | 37.8 | 🥈 66.3 | 🥈 0.97x |
-| avsc 🥉 | Avro | 🥉 10,616 | 🥉 0.48x | 32.2 | 🥉 36.3 | 🥉 68.0 | 🥉 0.99x |
-| json | JSON text | 21,934 | 1.00x | 🥈 24.2 | 44.4 | 68.7 | 1.00x |
-| v8 | V8 serialized value | 24,052 | 1.10x | 54.1 | 🥈 32.7 | 87.1 | 1.27x |
-| msgpackr | MessagePack | 16,788 | 0.77x | 35.4 | 67.6 | 103.0 | 1.50x |
-| cbor-x | CBOR | 17,139 | 0.78x | 31.5 | 70.2 | 105.9 | 1.54x |
-| @msgpack/msgpack | MessagePack | 16,475 | 0.75x | 56.6 | 103.2 | 160.2 | 2.33x |
-| bunker | Bunker | 🥇 8,156 | 🥇 0.37x | 148.0 | 56.7 | 204.5 | 2.98x |
-| bson | BSON | 27,199 | 1.24x | 88.6 | 147.1 | 234.8 | 3.42x |
-| flatbuffers-flexbuffers | FlexBuffers | 11,893 | 0.54x | 232.6 | 201.6 | 430.3 | 6.26x |
-| protobufjs | Protocol Buffers Struct | 33,671 | 1.54x | 225.6 | 220.9 | 447.6 | 6.52x |
-| @bufbuild/protobuf | Protocol Buffers Struct | 33,671 | 1.54x | 1098.7 | 1156.0 | 2251.2 | 32.77x |
+| codec 🥇 | codec binary | 🥈 10,414 | 🥈 0.47x | 🥇 18.9 | 🥇 18.8 | 🥇 38.4 | 🥇 0.57x |
+| avsc 🥈 | Avro | 🥉 10,616 | 🥉 0.48x | 30.7 | 🥉 35.7 | 🥈 66.2 | 🥈 0.99x |
+| msgpackr-records 🥉 | MessagePack | 10,724 | 0.49x | 🥉 29.1 | 37.4 | 🥉 66.5 | 🥉 0.99x |
+| json | JSON text | 21,934 | 1.00x | 🥈 23.4 | 43.7 | 67.1 | 1.00x |
+| v8 | V8 serialized value | 24,052 | 1.10x | 62.0 | 🥈 34.3 | 96.3 | 1.43x |
+| msgpackr | MessagePack | 16,788 | 0.77x | 34.4 | 64.1 | 98.6 | 1.47x |
+| cbor-x | CBOR | 17,139 | 0.78x | 30.5 | 67.6 | 101.8 | 1.52x |
+| @msgpack/msgpack | MessagePack | 16,475 | 0.75x | 57.1 | 102.3 | 159.7 | 2.38x |
+| bunker | Bunker | 🥇 8,156 | 🥇 0.37x | 145.2 | 56.5 | 201.6 | 3.00x |
+| bson | BSON | 27,199 | 1.24x | 84.8 | 137.5 | 225.1 | 3.35x |
+| protobufjs | Protocol Buffers Struct | 33,671 | 1.54x | 217.3 | 211.3 | 429.0 | 6.39x |
+| flatbuffers-flexbuffers | FlexBuffers | 11,893 | 0.54x | 257.2 | 204.1 | 465.7 | 6.94x |
+| @bufbuild/protobuf | Protocol Buffers Struct | 33,671 | 1.54x | 1103.0 | 1163.5 | 2269.8 | 33.82x |
 
 ## profile
 
@@ -30,19 +30,19 @@ One medium nested object with strings, numbers, booleans, arrays, and maps.
 
 | Serializer | Format | Bytes | Size vs JSON | Encode µs | Decode µs | Round trip µs | Round trip vs JSON |
 | :-- | :-- | --: | --: | --: | --: | --: | --: |
-| codec 🥇 | codec binary | 🥇 803 | 🥇 0.74x | 🥈 0.94 | 🥇 1.02 | 🥇 1.96 | 🥇 0.95x |
-| json 🥈 | JSON text | 1,082 | 1.00x | 🥇 0.74 | 🥈 1.28 | 🥈 2.06 | 🥈 1.00x |
-| avsc 🥉 | Avro | 🥈 806 | 🥈 0.74x | 🥉 1.13 | 3.29 | 🥉 4.41 | 🥉 2.14x |
-| msgpackr | MessagePack | 949 | 0.88x | 1.25 | 3.35 | 4.60 | 2.23x |
-| v8 | V8 serialized value | 1,266 | 1.17x | 2.49 | 🥉 2.34 | 4.86 | 2.35x |
-| @msgpack/msgpack | MessagePack | 🥉 943 | 🥉 0.87x | 1.83 | 3.44 | 5.32 | 2.58x |
-| cbor-x | CBOR | 957 | 0.88x | 1.18 | 4.34 | 5.54 | 2.69x |
-| msgpackr-records | MessagePack | 955 | 0.88x | 1.64 | 4.14 | 5.79 | 2.81x |
-| bson | BSON | 1,127 | 1.04x | 3.02 | 6.47 | 9.36 | 4.54x |
-| bunker | Bunker | 978 | 0.90x | 5.90 | 8.97 | 14.9 | 7.23x |
-| protobufjs | Protocol Buffers Struct | 1,369 | 1.27x | 7.10 | 8.07 | 15.1 | 7.33x |
-| flatbuffers-flexbuffers | FlexBuffers | 1,134 | 1.05x | 18.4 | 9.33 | 27.5 | 13.33x |
-| @bufbuild/protobuf | Protocol Buffers Struct | 1,369 | 1.27x | 32.6 | 32.6 | 64.9 | 31.49x |
+| codec 🥇 | codec binary | 🥇 803 | 🥇 0.74x | 🥈 0.80 | 🥇 1.09 | 🥇 1.89 | 🥇 0.93x |
+| json 🥈 | JSON text | 1,082 | 1.00x | 🥇 0.75 | 🥈 1.28 | 🥈 2.04 | 🥈 1.00x |
+| avsc 🥉 | Avro | 🥈 806 | 🥈 0.74x | 🥉 1.11 | 2.76 | 🥉 4.24 | 🥉 2.07x |
+| msgpackr | MessagePack | 949 | 0.88x | 1.24 | 3.34 | 4.58 | 2.25x |
+| v8 | V8 serialized value | 1,266 | 1.17x | 2.41 | 🥉 2.30 | 4.75 | 2.33x |
+| @msgpack/msgpack | MessagePack | 🥉 943 | 🥉 0.87x | 1.74 | 3.28 | 5.01 | 2.45x |
+| cbor-x | CBOR | 957 | 0.88x | 1.15 | 4.14 | 5.29 | 2.59x |
+| msgpackr-records | MessagePack | 955 | 0.88x | 1.64 | 4.00 | 5.68 | 2.78x |
+| bson | BSON | 1,127 | 1.04x | 2.58 | 6.57 | 9.15 | 4.48x |
+| bunker | Bunker | 978 | 0.90x | 5.83 | 8.66 | 14.3 | 6.99x |
+| protobufjs | Protocol Buffers Struct | 1,369 | 1.27x | 7.04 | 7.89 | 14.9 | 7.31x |
+| flatbuffers-flexbuffers | FlexBuffers | 1,134 | 1.05x | 18.4 | 9.39 | 27.7 | 13.59x |
+| @bufbuild/protobuf | Protocol Buffers Struct | 1,369 | 1.27x | 32.8 | 33.4 | 66.2 | 32.45x |
 
 ## coupon-batch
 
@@ -50,19 +50,19 @@ A batch of compact, repeated payment-style records inspired by avsc's Coupon ben
 
 | Serializer | Format | Bytes | Size vs JSON | Encode µs | Decode µs | Round trip µs | Round trip vs JSON |
 | :-- | :-- | --: | --: | --: | --: | --: | --: |
-| codec 🥇 | codec binary | 7,589 | 0.35x | 🥇 11.4 | 🥇 15.0 | 🥇 26.0 | 🥇 0.54x |
-| msgpackr-records 🥈 | MessagePack | 🥈 6,125 | 🥈 0.28x | 🥈 19.7 | 25.3 | 🥈 45.1 | 🥈 0.94x |
-| json 🥉 | JSON text | 21,658 | 1.00x | 🥉 20.2 | 28.0 | 🥉 48.1 | 🥉 1.00x |
-| v8 | V8 serialized value | 12,667 | 0.58x | 42.2 | 🥉 24.8 | 66.6 | 1.39x |
-| avsc | Avro | 🥉 6,927 | 🥉 0.32x | 30.2 | 41.9 | 71.5 | 1.49x |
-| bunker | Bunker | 🥇 3,407 | 🥇 0.16x | 63.3 | 🥈 21.5 | 85.0 | 1.77x |
-| msgpackr | MessagePack | 16,687 | 0.77x | 31.1 | 71.2 | 103.2 | 2.15x |
-| cbor-x | CBOR | 16,713 | 0.77x | 30.4 | 83.6 | 113.8 | 2.37x |
-| @msgpack/msgpack | MessagePack | 16,429 | 0.76x | 39.5 | 87.8 | 127.5 | 2.65x |
-| bson | BSON | 21,044 | 0.97x | 54.9 | 168.9 | 223.2 | 4.64x |
-| protobufjs | Protocol Buffers Struct | 26,112 | 1.21x | 180.7 | 191.3 | 372.5 | 7.75x |
-| flatbuffers-flexbuffers | FlexBuffers | 8,108 | 0.37x | 171.8 | 207.9 | 380.6 | 7.92x |
-| @bufbuild/protobuf | Protocol Buffers Struct | 26,112 | 1.21x | 745.6 | 767.3 | 1513.3 | 31.49x |
+| codec 🥇 | codec binary | 7,589 | 0.35x | 🥇 11.0 | 🥇 13.6 | 🥇 24.7 | 🥇 0.51x |
+| msgpackr-records 🥈 | MessagePack | 🥈 6,125 | 🥈 0.28x | 🥈 19.6 | 25.5 | 🥈 45.0 | 🥈 0.93x |
+| json 🥉 | JSON text | 21,658 | 1.00x | 🥉 20.1 | 28.1 | 🥉 48.4 | 🥉 1.00x |
+| v8 | V8 serialized value | 12,667 | 0.58x | 41.7 | 🥉 24.3 | 66.1 | 1.37x |
+| avsc | Avro | 🥉 6,927 | 🥉 0.32x | 29.1 | 42.2 | 70.9 | 1.46x |
+| bunker | Bunker | 🥇 3,407 | 🥇 0.16x | 63.5 | 🥈 22.2 | 86.0 | 1.78x |
+| msgpackr | MessagePack | 16,687 | 0.77x | 32.1 | 71.9 | 104.2 | 2.15x |
+| cbor-x | CBOR | 16,713 | 0.77x | 29.8 | 81.4 | 111.4 | 2.30x |
+| @msgpack/msgpack | MessagePack | 16,429 | 0.76x | 39.4 | 87.0 | 126.5 | 2.61x |
+| bson | BSON | 21,044 | 0.97x | 54.4 | 162.3 | 216.5 | 4.47x |
+| protobufjs | Protocol Buffers Struct | 26,112 | 1.21x | 182.7 | 193.6 | 375.2 | 7.75x |
+| flatbuffers-flexbuffers | FlexBuffers | 8,108 | 0.37x | 170.7 | 207.7 | 378.4 | 7.82x |
+| @bufbuild/protobuf | Protocol Buffers Struct | 26,112 | 1.21x | 743.8 | 767.3 | 1510.0 | 31.21x |
 
 ## task-board
 
@@ -70,19 +70,19 @@ A collection-like object with nested records and repeated child objects.
 
 | Serializer | Format | Bytes | Size vs JSON | Encode µs | Decode µs | Round trip µs | Round trip vs JSON |
 | :-- | :-- | --: | --: | --: | --: | --: | --: |
-| codec 🥇 | codec binary | 🥉 23,664 | 🥉 0.62x | 🥇 27.1 | 🥇 36.9 | 🥇 64.0 | 🥇 0.71x |
-| avsc 🥈 | Avro | 23,917 | 0.63x | 43.4 | 🥉 46.6 | 🥈 89.1 | 🥈 0.98x |
-| msgpackr-records 🥉 | MessagePack | 24,130 | 0.63x | 🥉 40.3 | 50.2 | 🥉 90.1 | 🥉 0.99x |
-| json | JSON text | 38,080 | 1.00x | 🥈 30.1 | 61.1 | 90.7 | 1.00x |
-| v8 | V8 serialized value | 31,417 | 0.83x | 77.1 | 🥈 42.7 | 120.6 | 1.33x |
-| msgpackr | MessagePack | 32,949 | 0.87x | 45.7 | 90.1 | 136.0 | 1.50x |
-| cbor-x | CBOR | 33,050 | 0.87x | 44.3 | 103.4 | 167.7 | 1.85x |
-| bunker | Bunker | 🥇 14,668 | 🥇 0.39x | 196.7 | 81.3 | 278.3 | 3.07x |
-| @msgpack/msgpack | MessagePack | 32,453 | 0.85x | 78.9 | 204.8 | 284.9 | 3.14x |
-| bson | BSON | 42,103 | 1.11x | 100.0 | 233.6 | 329.3 | 3.63x |
-| protobufjs | Protocol Buffers Struct | 45,372 | 1.19x | 257.0 | 275.2 | 533.3 | 5.88x |
-| flatbuffers-flexbuffers | FlexBuffers | 🥈 21,275 | 🥈 0.56x | 313.0 | 292.0 | 604.6 | 6.67x |
-| @bufbuild/protobuf | Protocol Buffers Struct | 45,372 | 1.19x | 1147.1 | 1261.8 | 2408.9 | 26.56x |
+| codec 🥇 | codec binary | 🥉 23,664 | 🥉 0.62x | 🥇 28.4 | 🥇 35.3 | 🥇 67.1 | 🥇 0.74x |
+| avsc 🥈 | Avro | 23,917 | 0.63x | 🥉 40.5 | 🥈 48.3 | 🥈 88.3 | 🥈 0.98x |
+| json 🥉 | JSON text | 38,080 | 1.00x | 🥈 29.9 | 60.6 | 🥉 90.2 | 🥉 1.00x |
+| msgpackr-records | MessagePack | 24,130 | 0.63x | 40.9 | 🥉 50.2 | 91.7 | 1.02x |
+| msgpackr | MessagePack | 32,949 | 0.87x | 46.4 | 88.5 | 134.8 | 1.49x |
+| v8 | V8 serialized value | 31,417 | 0.83x | 109.6 | 53.7 | 163.3 | 1.81x |
+| cbor-x | CBOR | 33,050 | 0.87x | 44.1 | 103.0 | 165.3 | 1.83x |
+| bunker | Bunker | 🥇 14,668 | 🥇 0.39x | 196.6 | 83.0 | 279.9 | 3.10x |
+| @msgpack/msgpack | MessagePack | 32,453 | 0.85x | 83.9 | 217.4 | 301.3 | 3.34x |
+| bson | BSON | 42,103 | 1.11x | 99.0 | 223.5 | 322.8 | 3.58x |
+| protobufjs | Protocol Buffers Struct | 45,372 | 1.19x | 255.0 | 268.9 | 524.0 | 5.81x |
+| flatbuffers-flexbuffers | FlexBuffers | 🥈 21,275 | 🥈 0.56x | 317.5 | 294.7 | 611.3 | 6.78x |
+| @bufbuild/protobuf | Protocol Buffers Struct | 45,372 | 1.19x | 1153.9 | 1279.8 | 2433.7 | 26.98x |
 
 ## vector-tile
 
@@ -90,19 +90,19 @@ A vector-tile style payload with nested arrays and many small unsigned integers.
 
 | Serializer | Format | Bytes | Size vs JSON | Encode µs | Decode µs | Round trip µs | Round trip vs JSON |
 | :-- | :-- | --: | --: | --: | --: | --: | --: |
-| codec 🥇 | codec binary | 🥇 7,995 | 🥇 0.34x | 🥇 36.4 | 🥇 21.2 | 🥇 58.2 | 🥇 0.50x |
-| avsc 🥈 | Avro | 🥉 9,356 | 🥉 0.40x | 47.5 | 🥈 38.9 | 🥈 87.1 | 🥈 0.74x |
-| msgpackr-records 🥉 | MessagePack | 9,727 | 0.42x | 44.7 | 59.2 | 🥉 103.9 | 🥉 0.89x |
-| cbor-x | CBOR | 13,932 | 0.60x | 🥈 40.3 | 71.0 | 111.3 | 0.95x |
-| bunker | Bunker | 🥈 8,293 | 🥈 0.36x | 65.0 | 🥉 51.9 | 116.7 | 0.99x |
-| json | JSON text | 23,196 | 1.00x | 🥉 43.3 | 73.9 | 117.4 | 1.00x |
-| msgpackr | MessagePack | 12,413 | 0.54x | 48.4 | 86.9 | 134.7 | 1.15x |
-| v8 | V8 serialized value | 50,648 | 2.18x | 81.9 | 52.5 | 135.3 | 1.15x |
-| @msgpack/msgpack | MessagePack | 12,027 | 0.52x | 100.5 | 57.9 | 158.2 | 1.35x |
-| bson | BSON | 44,061 | 1.90x | 203.8 | 128.0 | 331.5 | 2.83x |
-| flatbuffers-flexbuffers | FlexBuffers | 13,074 | 0.56x | 278.8 | 239.9 | 519.1 | 4.42x |
-| protobufjs | Protocol Buffers Struct | 62,651 | 2.70x | 375.4 | 341.7 | 715.5 | 6.10x |
-| @bufbuild/protobuf | Protocol Buffers Struct | 62,651 | 2.70x | 2548.8 | 2681.0 | 5229.8 | 44.56x |
+| codec 🥇 | codec binary | 🥇 7,995 | 🥇 0.34x | 🥇 34.5 | 🥇 20.4 | 🥇 54.9 | 🥇 0.47x |
+| avsc 🥈 | Avro | 🥉 9,356 | 🥉 0.40x | 48.4 | 🥈 38.6 | 🥈 86.9 | 🥈 0.75x |
+| msgpackr-records 🥉 | MessagePack | 9,727 | 0.42x | 48.5 | 59.8 | 🥉 108.5 | 🥉 0.93x |
+| cbor-x | CBOR | 13,932 | 0.60x | 🥈 41.2 | 72.2 | 113.3 | 0.97x |
+| json | JSON text | 23,196 | 1.00x | 🥉 42.5 | 74.1 | 116.5 | 1.00x |
+| bunker | Bunker | 🥈 8,293 | 🥈 0.36x | 65.6 | 🥉 51.6 | 116.9 | 1.00x |
+| msgpackr | MessagePack | 12,413 | 0.54x | 47.8 | 80.6 | 128.5 | 1.10x |
+| v8 | V8 serialized value | 50,648 | 2.18x | 84.3 | 51.7 | 136.1 | 1.17x |
+| @msgpack/msgpack | MessagePack | 12,027 | 0.52x | 101.2 | 59.3 | 160.9 | 1.38x |
+| bson | BSON | 44,061 | 1.90x | 188.1 | 115.8 | 304.5 | 2.61x |
+| flatbuffers-flexbuffers | FlexBuffers | 13,074 | 0.56x | 275.0 | 241.0 | 516.6 | 4.43x |
+| protobufjs | Protocol Buffers Struct | 62,651 | 2.70x | 403.5 | 353.6 | 757.1 | 6.50x |
+| @bufbuild/protobuf | Protocol Buffers Struct | 62,651 | 2.70x | 2671.9 | 2762.3 | 5449.9 | 46.77x |
 
 ## search-index
 
@@ -110,16 +110,16 @@ A large object with a long string snapshot, arrays, and a large string-keyed ind
 
 | Serializer | Format | Bytes | Size vs JSON | Encode µs | Decode µs | Round trip µs | Round trip vs JSON |
 | :-- | :-- | --: | --: | --: | --: | --: | --: |
-| codec 🥇 | codec binary | 🥇 12,018 | 🥇 0.47x | 🥇 20.9 | 🥇 31.2 | 🥇 54.6 | 🥇 0.64x |
-| json 🥈 | JSON text | 25,656 | 1.00x | 🥈 26.7 | 57.5 | 🥈 85.3 | 🥈 1.00x |
-| msgpackr-records 🥉 | MessagePack | 🥉 12,684 | 🥉 0.49x | 🥉 35.3 | 🥉 50.1 | 🥉 86.8 | 🥉 1.02x |
-| avsc | Avro | 🥈 12,072 | 🥈 0.47x | 38.5 | 50.9 | 88.0 | 1.03x |
-| v8 | V8 serialized value | 24,261 | 0.95x | 66.6 | 🥈 41.3 | 107.9 | 1.26x |
-| cbor-x | CBOR | 21,042 | 0.82x | 41.5 | 88.9 | 131.0 | 1.54x |
-| msgpackr | MessagePack | 20,942 | 0.82x | 50.4 | 86.2 | 136.5 | 1.60x |
-| @msgpack/msgpack | MessagePack | 20,522 | 0.80x | 62.3 | 161.9 | 225.2 | 2.64x |
-| bson | BSON | 27,660 | 1.08x | 81.5 | 198.4 | 280.4 | 3.29x |
-| bunker | Bunker | 13,435 | 0.52x | 409.4 | 119.9 | 527.4 | 6.18x |
-| protobufjs | Protocol Buffers Struct | 32,851 | 1.28x | 307.7 | 288.1 | 601.6 | 7.05x |
-| flatbuffers-flexbuffers | FlexBuffers | 15,875 | 0.62x | 381.3 | 258.9 | 619.5 | 7.26x |
-| @bufbuild/protobuf | Protocol Buffers Struct | 32,851 | 1.28x | 1019.7 | 1037.4 | 2039.1 | 23.90x |
+| codec 🥇 | codec binary | 🥇 12,018 | 🥇 0.47x | 🥇 19.8 | 🥇 23.5 | 🥇 43.2 | 🥇 0.55x |
+| json 🥈 | JSON text | 25,656 | 1.00x | 🥈 24.0 | 54.4 | 🥈 78.4 | 🥈 1.00x |
+| avsc 🥉 | Avro | 🥈 12,072 | 🥈 0.47x | 🥉 34.1 | 🥉 46.7 | 🥉 80.8 | 🥉 1.03x |
+| msgpackr-records | MessagePack | 🥉 12,684 | 🥉 0.49x | 34.7 | 47.4 | 81.6 | 1.04x |
+| v8 | V8 serialized value | 24,261 | 0.95x | 71.9 | 🥈 39.4 | 111.0 | 1.42x |
+| cbor-x | CBOR | 21,042 | 0.82x | 36.5 | 77.5 | 113.9 | 1.45x |
+| msgpackr | MessagePack | 20,942 | 0.82x | 44.4 | 76.3 | 121.0 | 1.54x |
+| @msgpack/msgpack | MessagePack | 20,522 | 0.80x | 59.0 | 144.5 | 204.7 | 2.61x |
+| bson | BSON | 27,660 | 1.08x | 80.0 | 179.4 | 272.8 | 3.48x |
+| protobufjs | Protocol Buffers Struct | 32,851 | 1.28x | 238.2 | 232.4 | 473.9 | 6.04x |
+| bunker | Bunker | 13,435 | 0.52x | 394.5 | 117.1 | 511.1 | 6.52x |
+| flatbuffers-flexbuffers | FlexBuffers | 15,875 | 0.62x | 504.5 | 268.0 | 794.2 | 10.13x |
+| @bufbuild/protobuf | Protocol Buffers Struct | 32,851 | 1.28x | 912.5 | 974.6 | 1889.3 | 24.09x |

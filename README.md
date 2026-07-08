@@ -137,7 +137,7 @@ The returned bytes are safe to store, pass to APIs, or access through
 Supported primitive schemas are:
 
 - `"string"`: UTF-8 string with a variable-length byte length prefix
-- `"int"`: signed safe integer, variable-length encoded
+- `"int"`: signed safe integer, ZigZag encoded and then variable-length encoded
 - `"uint"`: unsigned safe integer, variable-length encoded
 - `"uint8Array"`: byte array with a variable-length byte length prefix
 - `"boolean"`: one byte, `0` or `1`
@@ -184,6 +184,12 @@ unknownCodec.decode(
 );
 ```
 
+`"uint"` uses the same base-128 varint layout as Protocol Buffers: each byte
+stores 7 payload bits and uses the high bit as a continuation flag. `"int"`
+first maps signed integers with ZigZag encoding (`0 -> 0`, `-1 -> 1`,
+`1 -> 2`, `-2 -> 3`) and then writes the result as a `uint` varint. As in
+Protocol Buffers, `-0` is canonicalized to `0`.
+
 ### Unknown Values and Schema Values
 
 Use `"unknown"` when the encoder should discover the schema from the value at
@@ -229,8 +235,9 @@ userCodec.decode(userCodec.encode({ id: 1, name: "Ada" }));
 
 ### BigInts
 
-BigInts use `bigint(maxBytes = 128)`. The `maxBytes` cap is enforced while
-encoding and decoding.
+BigInts use `bigint(maxBytes = 128)`. Values are ZigZag encoded and then written
+as unsigned base-128 varints, like `"int"` but without the JavaScript safe
+integer limit. The `maxBytes` cap is enforced while encoding and decoding.
 
 ```ts
 import { bigint, createCodec } from "codec";
@@ -607,11 +614,13 @@ import {
 	createDecoder,
 	createEncoder,
 	readVarInt,
+	readVarBigInt,
 	readVarString,
 	readVarUint,
 	readVarUint8Array,
 	toUint8Array,
 	writeVarInt,
+	writeVarBigInt,
 	writeVarString,
 	writeVarUint,
 	writeVarUint8Array,
@@ -621,6 +630,7 @@ const encoder = createEncoder();
 
 writeVarUint(encoder, 123);
 writeVarInt(encoder, -42);
+writeVarBigInt(encoder, 2n ** 80n);
 writeVarString(encoder, "hello");
 writeVarUint8Array(encoder, new Uint8Array([1, 2, 3]));
 
@@ -629,9 +639,15 @@ const decoder = createDecoder(bytes);
 
 readVarUint(decoder);
 readVarInt(decoder);
+readVarBigInt(decoder);
 readVarString(decoder);
 readVarUint8Array(decoder);
 ```
+
+`writeVarUint`/`readVarUint` use unsigned base-128 varints. `writeVarInt` and
+`readVarInt` use ZigZag plus the same unsigned varint representation.
+`writeVarBigInt`/`readVarBigInt` use the same signed representation for
+arbitrary-size BigInts.
 
 ## Benchmarks
 

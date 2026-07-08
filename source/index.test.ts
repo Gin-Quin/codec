@@ -83,15 +83,28 @@ const wireFormatFixtures: WireFormatFixture[] = [
 		name: "primitive int negative",
 		schema: "int",
 		value: -42,
-		expectedBytes: [106],
+		expectedBytes: [83],
 	},
 	{
-		name: "primitive int negative zero",
+		name: "primitive int positive multibyte",
+		schema: "int",
+		value: 300,
+		expectedBytes: [216, 4],
+	},
+	{
+		name: "primitive int negative multibyte",
+		schema: "int",
+		value: -300,
+		expectedBytes: [215, 4],
+	},
+	{
+		name: "primitive int negative zero normalizes to zero",
 		schema: "int",
 		value: -0,
-		expectedBytes: [64],
+		expectedBytes: [0],
 		assertDecoded: (decoded) => {
-			expect(Object.is(decoded, -0)).toBe(true);
+			expect(decoded).toBe(0);
+			expect(Object.is(decoded, -0)).toBe(false);
 		},
 	},
 	{
@@ -178,13 +191,13 @@ const wireFormatFixtures: WireFormatFixture[] = [
 		name: "bigint schema",
 		schema: bigint(),
 		value: -(2n ** 70n + 5n),
-		expectedBytes: [197, 128, 128, 128, 128, 128, 128, 128, 128, 128, 2],
+		expectedBytes: [137, 128, 128, 128, 128, 128, 128, 128, 128, 128, 2],
 	},
 	{
 		name: "composed array",
 		schema: array("int"),
 		value: [-1, 0, 1, 64],
-		expectedBytes: [4, 65, 0, 1, 128, 1],
+		expectedBytes: [4, 1, 0, 2, 128, 1],
 	},
 	{
 		name: "composed object",
@@ -215,7 +228,7 @@ const wireFormatFixtures: WireFormatFixture[] = [
 			product: { title: "string", price: "uint" },
 		}),
 		value: { type: "user", name: "Ada", age: 37 },
-		expectedBytes: [4, 117, 115, 101, 114, 3, 65, 100, 97, 37],
+		expectedBytes: [4, 117, 115, 101, 114, 3, 65, 100, 97, 74],
 	},
 	{
 		name: "composed union custom tag name",
@@ -228,7 +241,7 @@ const wireFormatFixtures: WireFormatFixture[] = [
 			},
 		}),
 		value: { kind: "user", name: "Ada", age: 37 },
-		expectedBytes: [4, 117, 115, 101, 114, 3, 65, 100, 97, 37],
+		expectedBytes: [4, 117, 115, 101, 114, 3, 65, 100, 97, 74],
 	},
 	{
 		name: "composed union uint discriminant",
@@ -246,7 +259,7 @@ const wireFormatFixtures: WireFormatFixture[] = [
 			2: { ok: "boolean" },
 		}),
 		value: { type: -1, error: "no" },
-		expectedBytes: [65, 2, 110, 111],
+		expectedBytes: [1, 2, 110, 111],
 	},
 	{
 		name: "composed untagged union",
@@ -273,7 +286,7 @@ const wireFormatFixtures: WireFormatFixture[] = [
 		name: "composed tuple",
 		schema: tuple("string", "int", "boolean"),
 		value: ["x", -2, false],
-		expectedBytes: [1, 120, 66, 0],
+		expectedBytes: [1, 120, 3, 0],
 	},
 	{
 		name: "lazy schema",
@@ -289,7 +302,7 @@ const wireFormatFixtures: WireFormatFixture[] = [
 		name: "recursive lazy schema",
 		schema: wireRecursiveSchema,
 		value: { type: "child", child: { type: "number", number: 42 } },
-		expectedBytes: [5, 99, 104, 105, 108, 100, 6, 110, 117, 109, 98, 101, 114, 42],
+		expectedBytes: [5, 99, 104, 105, 108, 100, 6, 110, 117, 109, 98, 101, 114, 84],
 	},
 	{
 		name: "nested composed schema",
@@ -308,7 +321,7 @@ const wireFormatFixtures: WireFormatFixture[] = [
 			maybe: new Date("2024-01-01T00:00:00.000Z"),
 		},
 		expectedBytes: [
-			2, 1, 97, 2, 195, 169, 2, 3, 111, 110, 101, 1, 3, 98, 105, 103, 172, 2, 2, 1, 0, 69, 5, 1, 0,
+			2, 1, 97, 2, 195, 169, 2, 3, 111, 110, 101, 1, 3, 98, 105, 103, 172, 2, 2, 1, 0, 9, 10, 1, 0,
 			0, 64, 31, 37, 204, 120, 66,
 		],
 	},
@@ -420,7 +433,9 @@ describe("signature codec", () => {
 		const twoByteCodec = createCodec(bigint(2));
 
 		expect(oneByteCodec.decode(oneByteCodec.encode(63n))).toBe(63n);
+		expect(oneByteCodec.decode(oneByteCodec.encode(-64n))).toBe(-64n);
 		expect(() => oneByteCodec.encode(64n)).toThrow("BigInt exceeds maxBytes (1)");
+		expect(() => oneByteCodec.encode(-65n)).toThrow("BigInt exceeds maxBytes (1)");
 		expect(() => oneByteCodec.decode(twoByteCodec.encode(64n))).toThrow(
 			"BigInt exceeds maxBytes (1)",
 		);
@@ -489,9 +504,25 @@ describe("signature codec", () => {
 		}
 	});
 
+	test("varbigint uses ZigZag plus base-128 wire format", () => {
+		const values = [0n, -1n, 1n, -2n, 63n, -64n, 64n, -65n, 300n, -300n];
+		const encoder = createEncoder();
+
+		for (const value of values) {
+			writeVarBigInt(encoder, value);
+		}
+
+		const encoded = toUint8Array(encoder);
+		expect(encoded).toEqual(new Uint8Array([0, 1, 2, 3, 126, 127, 128, 1, 129, 1, 216, 4, 215, 4]));
+
+		const decoder = createDecoder(encoded);
+		for (const value of values) {
+			expect(readVarBigInt(decoder)).toBe(value);
+		}
+	});
+
 	test("varint boundary values", () => {
 		const values = [
-			-0,
 			0,
 			1,
 			-1,
@@ -509,10 +540,31 @@ describe("signature codec", () => {
 			writeVarInt(encoder, value);
 		}
 
+		writeVarInt(encoder, -0);
+
 		const decoder = createDecoder(toUint8Array(encoder));
-		expect(Object.is(readVarInt(decoder), -0)).toBe(true);
-		for (let index = 1; index < values.length; index++) {
-			expect(readVarInt(decoder)).toBe(values[index]!);
+		for (const value of values) {
+			expect(readVarInt(decoder)).toBe(value);
+		}
+		const decodedNegativeZero = readVarInt(decoder);
+		expect(decodedNegativeZero).toBe(0);
+		expect(Object.is(decodedNegativeZero, -0)).toBe(false);
+	});
+
+	test("varint uses ZigZag plus base-128 wire format", () => {
+		const values = [0, -1, 1, -2, 63, -64, 64, -65, 300, -300];
+		const encoder = createEncoder();
+
+		for (const value of values) {
+			writeVarInt(encoder, value);
+		}
+
+		const encoded = toUint8Array(encoder);
+		expect(encoded).toEqual(new Uint8Array([0, 1, 2, 3, 126, 127, 128, 1, 129, 1, 216, 4, 215, 4]));
+
+		const decoder = createDecoder(encoded);
+		for (const value of values) {
+			expect(readVarInt(decoder)).toBe(value);
 		}
 	});
 
@@ -573,7 +625,9 @@ describe("signature codec", () => {
 			);
 		}
 
-		expect(Object.is(codec.decode(codec.encode(-0)), -0)).toBe(true);
+		const decodedNegativeZero = codec.decode(codec.encode(-0));
+		expect(decodedNegativeZero).toBe(0);
+		expect(Object.is(decodedNegativeZero, -0)).toBe(false);
 
 		type UnknownValue = InferType<"unknown">;
 		const unknownValue: UnknownValue = { anything: ["can", "go", 1] };
@@ -1310,7 +1364,7 @@ describe("signature codec", () => {
 		const expectedBytes = new Uint8Array([
 			23, 7, 100, 111, 99, 45, 49, 50, 51, 16, 99, 108, 105, 101, 110, 116, 45, 115, 105, 103, 110,
 			97, 116, 117, 114, 101, 15, 108, 111, 99, 97, 108, 45, 115, 105, 103, 110, 97, 116, 117, 114,
-			101, 1, 3, 1, 2, 3,
+			101, 2, 3, 1, 2, 3,
 		]);
 
 		expect(encodedWithCodec).toEqual(expectedBytes);
