@@ -25,6 +25,9 @@ import {
 	type BigIntSchema,
 	bigint as bigintSchema,
 	isSchema,
+	type LiteralSchema,
+	literal as literalSchema,
+	literalValuesEqual,
 	type MapSchema,
 	type ObjectSchema,
 	type OptionalSchema,
@@ -60,6 +63,7 @@ enum SchemaTag {
 	Schema = 18,
 	Null = 19,
 	Undefined = 20,
+	Literal = 21,
 }
 
 /** Writes a value using a schema without precompiling a codec. */
@@ -106,6 +110,9 @@ export function writeSchema(schema: Schema, value: any, encoder: Encoder): void 
 		}
 	} else {
 		switch (schema._type) {
+			case "literal":
+				writeLiteral(schema, value);
+				break;
 			case "array":
 				writeArray(schema, value, encoder);
 				break;
@@ -134,6 +141,12 @@ export function writeSchema(schema: Schema, value: any, encoder: Encoder): void 
 				writeTuple(schema, value, encoder);
 				break;
 		}
+	}
+}
+
+function writeLiteral(schema: LiteralSchema<unknown>, value: unknown): void {
+	if (!literalValuesEqual(value, schema.value)) {
+		throw new Error("Value does not match literal schema");
 	}
 }
 
@@ -249,6 +262,10 @@ export function writeSchemaValue(schema: Schema, encoder: Encoder): void {
 	}
 
 	switch (schema._type) {
+		case "literal":
+			writeUint8(encoder, SchemaTag.Literal);
+			writeUnknown(schema.value, encoder);
+			break;
 		case "array":
 			writeUint8(encoder, SchemaTag.Array);
 			writeSchemaValue(schema.element, encoder);
@@ -404,6 +421,8 @@ export function readSchemaValue(decoder: Decoder): Schema {
 			return "null";
 		case SchemaTag.Undefined:
 			return "undefined";
+		case SchemaTag.Literal:
+			return literalSchema(readUnknown(decoder));
 		default:
 			throw new Error(`Unknown schema tag: ${tag}`);
 	}
@@ -482,6 +501,8 @@ export function readSchema(schema: Schema, decoder: Decoder): any {
 	}
 
 	switch (schema._type) {
+		case "literal":
+			return schema.value;
 		case "array":
 			return readArray(schema, decoder);
 		case "object":
@@ -648,6 +669,8 @@ function matchesSchema(schema: Schema, value: any): boolean {
 	}
 
 	switch (schema._type) {
+		case "literal":
+			return literalValuesEqual(value, schema.value);
 		case "array":
 			if (!Array.isArray(value)) {
 				return false;

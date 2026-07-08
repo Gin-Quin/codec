@@ -30,6 +30,7 @@ type UnionVariantKeyCheck<
 /** A schema value that describes how a value is encoded and decoded. */
 export type Schema =
 	| PrimitiveType
+	| LiteralSchema<unknown>
 	| ArraySchema<Schema>
 	| ObjectSchema<Record<string, Schema>>
 	| OptionalSchema<Schema>
@@ -41,6 +42,7 @@ export type Schema =
 	| TupleSchema<Schema[]>
 	| (() =>
 			| PrimitiveType
+			| LiteralSchema<unknown>
 			| ArraySchema<Schema>
 			| ObjectSchema<Record<string, Schema>>
 			| OptionalSchema<Schema>
@@ -50,6 +52,12 @@ export type Schema =
 			| BigIntSchema
 			| SetSchema<Schema>
 			| TupleSchema<Schema[]>);
+
+/** Schema for a literal value encoded as zero bytes. */
+export interface LiteralSchema<Value> {
+	_type: "literal";
+	value: Value;
+}
 
 /** Schema for an array whose elements all use the same schema. */
 export interface ArraySchema<Type extends Schema> {
@@ -157,6 +165,11 @@ export function tuple<Elements extends Schema[]>(...elements: Elements): TupleSc
 	return { _type: "tuple", elements };
 }
 
+/** Creates a schema for a single literal value that is not encoded. */
+export function literal<const Value>(value: Value): LiteralSchema<Value> {
+	return { _type: "literal", value };
+}
+
 /** Creates a schema for values that may be `undefined`. */
 export function optional<Type extends Schema>(schema: Type): OptionalSchema<Type> {
 	return { _type: "optional", schema };
@@ -235,27 +248,29 @@ export type InferType<T extends Schema> = [Schema] extends [T]
 			: never
 		: [T] extends [PrimitiveType]
 			? InferPrimitiveType<T & PrimitiveType>
-			: [T] extends [ArraySchema<infer E>]
-				? Array<InferType<E>>
-				: [T] extends [ObjectSchema<infer Properties>]
-					? ExpandObject<InferObjectType<Properties>>
-					: [T] extends [OptionalSchema<infer Type>]
-						? InferType<Type> | undefined
-						: [T] extends [MapSchema<infer Type>]
-							? InferMapType<Type>
-							: [T] extends [BigIntSchema]
-								? bigint
-								: [T] extends [SetSchema<infer Type>]
-									? Set<InferType<Type>>
-									: [T] extends [TupleSchema<infer Elements>]
-										? InferTupleType<Elements>
-										: [T] extends [
-													UnionSchema<infer DiscriminantType, infer Variants, infer TagName>,
-												]
-											? InferUnionType<DiscriminantType, Variants, TagName>
-											: [T] extends [UntaggedUnionSchema<infer Variants>]
-												? InferUntaggedUnionType<Variants>
-												: never;
+			: [T] extends [LiteralSchema<infer Value>]
+				? Value
+				: [T] extends [ArraySchema<infer E>]
+					? Array<InferType<E>>
+					: [T] extends [ObjectSchema<infer Properties>]
+						? ExpandObject<InferObjectType<Properties>>
+						: [T] extends [OptionalSchema<infer Type>]
+							? InferType<Type> | undefined
+							: [T] extends [MapSchema<infer Type>]
+								? InferMapType<Type>
+								: [T] extends [BigIntSchema]
+									? bigint
+									: [T] extends [SetSchema<infer Type>]
+										? Set<InferType<Type>>
+										: [T] extends [TupleSchema<infer Elements>]
+											? InferTupleType<Elements>
+											: [T] extends [
+														UnionSchema<infer DiscriminantType, infer Variants, infer TagName>,
+													]
+												? InferUnionType<DiscriminantType, Variants, TagName>
+												: [T] extends [UntaggedUnionSchema<infer Variants>]
+													? InferUntaggedUnionType<Variants>
+													: never;
 
 type ExpandObject<Type> = Type extends object ? { [Key in keyof Type]: Type[Key] } : Type;
 
@@ -481,6 +496,10 @@ function joinSchemas(left: Schema | undefined, right: Schema): Schema {
 	}
 
 	switch (left._type) {
+		case "literal":
+			return literalValuesEqual(left.value, (right as LiteralSchema<unknown>).value)
+				? left
+				: "unknown";
 		case "array":
 			return array(joinSchemas(left.element, (right as ArraySchema<Schema>).element));
 		case "object":
@@ -609,6 +628,8 @@ function isConcreteSchema(value: unknown, stack: WeakSet<object>): value is Sche
 	try {
 		const candidate = value as { _type?: unknown };
 		switch (candidate._type) {
+			case "literal":
+				return true;
 			case "array":
 				return isConcreteSchema((candidate as ArraySchema<Schema>).element, stack);
 			case "object":
@@ -722,6 +743,8 @@ function schemasEqual(left: Schema, right: Schema): boolean {
 	}
 
 	switch (left._type) {
+		case "literal":
+			return literalValuesEqual(left.value, (right as LiteralSchema<unknown>).value);
 		case "array":
 			return schemasEqual(left.element, (right as ArraySchema<Schema>).element);
 		case "object":
@@ -767,6 +790,171 @@ function schemasEqual(left: Schema, right: Schema): boolean {
 			return true;
 		}
 	}
+}
+
+/** Compares two runtime values for literal schema matching. */
+export function literalValuesEqual(left: unknown, right: unknown): boolean {
+	return literalValuesEqualInner(left, right, new WeakMap<object, WeakSet<object>>());
+}
+
+function literalValuesEqualInner(
+	left: unknown,
+	right: unknown,
+	seen: WeakMap<object, WeakSet<object>>,
+): boolean {
+	if (Object.is(left, right)) {
+		return true;
+	}
+
+	if (left === null || right === null || typeof left !== "object" || typeof right !== "object") {
+		return false;
+	}
+
+	if (hasSeenPair(seen, left, right)) {
+		return true;
+	}
+
+	if (left instanceof Date || right instanceof Date) {
+		return left instanceof Date && right instanceof Date && left.getTime() === right.getTime();
+	}
+
+	if (left instanceof Uint8Array || right instanceof Uint8Array) {
+		return left instanceof Uint8Array && right instanceof Uint8Array && bytesEqual(left, right);
+	}
+
+	if (Array.isArray(left) || Array.isArray(right)) {
+		if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+			return false;
+		}
+
+		for (let index = 0; index < left.length; index++) {
+			if (!literalValuesEqualInner(left[index], right[index], seen)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	if (left instanceof Set || right instanceof Set) {
+		return (
+			left instanceof Set &&
+			right instanceof Set &&
+			setsEqual(left as Set<unknown>, right as Set<unknown>, seen)
+		);
+	}
+
+	if (left instanceof Map || right instanceof Map) {
+		return (
+			left instanceof Map &&
+			right instanceof Map &&
+			mapsEqual(left as Map<unknown, unknown>, right as Map<unknown, unknown>, seen)
+		);
+	}
+
+	if (Object.getPrototypeOf(left) !== Object.getPrototypeOf(right)) {
+		return false;
+	}
+
+	const leftKeys = getEnumerableOwnKeys(left);
+	const rightKeys = getEnumerableOwnKeys(right);
+	if (leftKeys.length !== rightKeys.length) {
+		return false;
+	}
+
+	for (const key of leftKeys) {
+		if (
+			!Object.hasOwn(right, key) ||
+			!literalValuesEqualInner(
+				(left as Record<PropertyKey, unknown>)[key],
+				(right as Record<PropertyKey, unknown>)[key],
+				seen,
+			)
+		) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+function getEnumerableOwnKeys(value: object): PropertyKey[] {
+	const symbolKeys = Object.getOwnPropertySymbols(value).filter((key) =>
+		Object.prototype.propertyIsEnumerable.call(value, key),
+	);
+	return [...Object.keys(value), ...symbolKeys];
+}
+
+function hasSeenPair(seen: WeakMap<object, WeakSet<object>>, left: object, right: object): boolean {
+	const existing = seen.get(left);
+	if (existing?.has(right)) {
+		return true;
+	}
+
+	if (existing) {
+		existing.add(right);
+	} else {
+		seen.set(left, new WeakSet([right]));
+	}
+	return false;
+}
+
+function bytesEqual(left: Uint8Array, right: Uint8Array): boolean {
+	if (left.byteLength !== right.byteLength) {
+		return false;
+	}
+
+	for (let index = 0; index < left.byteLength; index++) {
+		if (left[index] !== right[index]) {
+			return false;
+		}
+	}
+	return true;
+}
+
+function setsEqual(
+	left: Set<unknown>,
+	right: Set<unknown>,
+	seen: WeakMap<object, WeakSet<object>>,
+): boolean {
+	if (left.size !== right.size) {
+		return false;
+	}
+
+	const unmatched = [...right];
+	for (const leftValue of left) {
+		const index = unmatched.findIndex((rightValue) =>
+			literalValuesEqualInner(leftValue, rightValue, seen),
+		);
+		if (index === -1) {
+			return false;
+		}
+		unmatched.splice(index, 1);
+	}
+	return true;
+}
+
+function mapsEqual(
+	left: Map<unknown, unknown>,
+	right: Map<unknown, unknown>,
+	seen: WeakMap<object, WeakSet<object>>,
+): boolean {
+	if (left.size !== right.size) {
+		return false;
+	}
+
+	const unmatched = [...right];
+	for (const [leftKey, leftValue] of left) {
+		const index = unmatched.findIndex(
+			([rightKey, rightValue]) =>
+				literalValuesEqualInner(leftKey, rightKey, seen) &&
+				literalValuesEqualInner(leftValue, rightValue, seen),
+		);
+		if (index === -1) {
+			return false;
+		}
+		unmatched.splice(index, 1);
+	}
+	return true;
 }
 
 function schemaRecordsEqual(left: Record<string, Schema>, right: Record<string, Schema>): boolean {

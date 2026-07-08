@@ -32,13 +32,14 @@ import {
 	writeUnknown,
 	writeUntaggedUnion,
 } from "./dynamic";
-import type { Schema } from "./schema";
+import { literalValuesEqual, type Schema } from "./schema";
 
 type WriteFunction = (encoder: Encoder, value: any) => void;
 type ReadFunction = (decoder: Decoder) => any;
 
 interface CompileState {
 	lazySchemas: Array<() => Schema>;
+	literalSchemas: Array<{ value: unknown }>;
 	nextId: number;
 	stringCaches: Array<unknown[]>;
 }
@@ -77,32 +78,45 @@ const compiledHelpers = {
 	writeVarString,
 	writeVarUint,
 	writeVarUint8Array,
+	literalValuesEqual,
 };
 const compiledHelperNames = Object.keys(compiledHelpers);
 const compiledHelperDeclarations = `const {${compiledHelperNames.join(",")}} = helpers;`;
 
 /** Compiles a schema into a low-level writer function. */
 export function compileWriter(schema: Schema): WriteFunction {
-	const state: CompileState = { lazySchemas: [], nextId: 0, stringCaches: [] };
+	const state: CompileState = {
+		lazySchemas: [],
+		literalSchemas: [],
+		nextId: 0,
+		stringCaches: [],
+	};
 	const body = emitWrite(schema, "value", "encoder", state);
 	return new Function(
 		"helpers",
 		"lazySchemas",
+		"literalSchemas",
 		`${compiledHelperDeclarations}return function writeCompiled(encoder, value) {${body}}`,
-	)(compiledHelpers, state.lazySchemas) as WriteFunction;
+	)(compiledHelpers, state.lazySchemas, state.literalSchemas) as WriteFunction;
 }
 
 /** Compiles a schema into a low-level reader function. */
 export function compileReader(schema: Schema): ReadFunction {
-	const state: CompileState = { lazySchemas: [], nextId: 0, stringCaches: [] };
+	const state: CompileState = {
+		lazySchemas: [],
+		literalSchemas: [],
+		nextId: 0,
+		stringCaches: [],
+	};
 	const result = emitRead(schema, "decoder", state);
 	const body = `${result.setup}return ${result.expression};`;
 	return new Function(
 		"helpers",
 		"lazySchemas",
+		"literalSchemas",
 		"stringCaches",
 		`${compiledHelperDeclarations}return function readCompiled(decoder) {${body}}`,
-	)(compiledHelpers, state.lazySchemas, state.stringCaches) as ReadFunction;
+	)(compiledHelpers, state.lazySchemas, state.literalSchemas, state.stringCaches) as ReadFunction;
 }
 
 function emitWrite(schema: Schema, value: string, encoder: string, state: CompileState): string {
@@ -140,6 +154,10 @@ function emitWrite(schema: Schema, value: string, encoder: string, state: Compil
 	}
 
 	switch (schema._type) {
+		case "literal": {
+			const index = state.literalSchemas.push(schema) - 1;
+			return `if (!literalValuesEqual(${value}, literalSchemas[${index}].value)) {throw new Error("Value does not match literal schema");}`;
+		}
 		case "array": {
 			const index = createId("index", state);
 			const length = createId("length", state);
@@ -254,6 +272,10 @@ function emitRead(schema: Schema, decoder: string, state: CompileState): ReadFra
 	}
 
 	switch (schema._type) {
+		case "literal": {
+			const index = state.literalSchemas.push(schema) - 1;
+			return { expression: `literalSchemas[${index}].value`, setup: "" };
+		}
 		case "array": {
 			const length = createId("length", state);
 			const index = createId("index", state);

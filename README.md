@@ -233,6 +233,37 @@ const userCodec = createCodec(decodedSchema);
 userCodec.decode(userCodec.encode({ id: 1, name: "Ada" }));
 ```
 
+### Literals
+
+`literal(value)` creates a schema for exactly one value. Literal values encode as
+zero payload bytes and always decode to the schema's literal value.
+
+```ts
+import { createCodec, literal, union } from "codec";
+
+const answerCodec = createCodec(literal(12));
+const encoded = answerCodec.encode(12);
+// Uint8Array(0) []
+
+answerCodec.decode(encoded);
+// 12
+```
+
+Literals are useful in untagged unions because the union index carries the whole
+value.
+
+```ts
+const greetingCodec = createCodec(union([literal("hello"), literal("you")]));
+
+greetingCodec.encode("hello");
+// Uint8Array [0]
+
+greetingCodec.encode("you");
+// Uint8Array [1]
+```
+
+Encoding with a literal schema rejects values that do not match the literal.
+
 ### BigInts
 
 BigInts use `bigint(maxBytes = 128)`. Values are ZigZag encoded and then written
@@ -584,6 +615,7 @@ decodeSchema(buffer): Schema;
 array(element);
 object(fields);
 map(element);
+literal(value);
 tuple(...elements);
 optional(schema);
 union({ tagName, tagType, variants });

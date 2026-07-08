@@ -8,6 +8,7 @@ import {
 	decodeSchema,
 	encodeSchema,
 	type InferType,
+	literal,
 	map,
 	object,
 	optional,
@@ -188,6 +189,18 @@ const wireFormatFixtures: WireFormatFixture[] = [
 		expectedBytes: [],
 	},
 	{
+		name: "literal number",
+		schema: literal(12),
+		value: 12,
+		expectedBytes: [],
+	},
+	{
+		name: "literal schema value",
+		schema: "schema",
+		value: literal(12),
+		expectedBytes: [21, 2, 12],
+	},
+	{
 		name: "bigint schema",
 		schema: bigint(),
 		value: -(2n ** 70n + 5n),
@@ -269,6 +282,12 @@ const wireFormatFixtures: WireFormatFixture[] = [
 		]),
 		value: { title: "Widget", price: 300 },
 		expectedBytes: [1, 6, 87, 105, 100, 103, 101, 116, 172, 2],
+	},
+	{
+		name: "composed untagged union literal",
+		schema: union([literal("hello"), literal("you")]),
+		value: "you",
+		expectedBytes: [1],
 	},
 	{
 		name: "composed map",
@@ -459,6 +478,46 @@ describe("signature codec", () => {
 		const value = "hello café 🚀";
 
 		expect(codec.decode(codec.encode(value))).toBe(value);
+	});
+
+	test("literal schema encodes zero bytes and decodes the fixed value", () => {
+		const codec = createCodec(literal(12));
+
+		expect(codec.encode(12)).toEqual(new Uint8Array([]));
+		expect(codec.decode(new Uint8Array([]))).toBe(12);
+		expect(codec.decode(createDecoder(new Uint8Array([])))).toBe(12);
+		expect(() => codec.encode(13 as any)).toThrow("Value does not match literal schema");
+	});
+
+	test("literal schema supports structural values", () => {
+		const value = {
+			createdAt: new Date("2024-01-02T03:04:05.678Z"),
+			flags: new Set(["a", "b"]),
+			id: new Uint8Array([1, 2, 3]),
+			name: "Ada",
+			values: [1, true, null],
+		};
+		const codec = createCodec(literal(value));
+
+		expect(codec.encode({ ...value, id: new Uint8Array([1, 2, 3]) })).toEqual(new Uint8Array([]));
+		expect(codec.decode(new Uint8Array([]))).toEqual(value);
+		expect(() => codec.encode({ ...value, name: "Grace" })).toThrow(
+			"Value does not match literal schema",
+		);
+	});
+
+	test("literal schemas encode as untagged union indexes", () => {
+		const schema = union([literal("hello"), literal("you")]);
+		const codec = createCodec(schema);
+		type Greeting = InferType<typeof schema>;
+		const greeting: Greeting = "hello";
+
+		expect(codec.encode("hello")).toEqual(new Uint8Array([0]));
+		expect(codec.encode("you")).toEqual(new Uint8Array([1]));
+		expect(codec.decode(new Uint8Array([0]))).toBe("hello");
+		expect(codec.decode(new Uint8Array([1]))).toBe("you");
+		expect(greeting).toBe("hello");
+		expect(() => codec.encode("other" as any)).toThrow("No matching union variant");
 	});
 
 	test("varuint boundary values", () => {
