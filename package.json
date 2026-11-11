@@ -18,14 +18,14 @@
 		"benchmark:generate-md": "bun ./benchmarks/generate-markdown.ts",
 		"benchmark:view": "bun ./benchmarks.html",
 		"deploy": "bun run test && bun x jsr publish",
-		"build": "rm -rf dist && bun build source/index.ts --outdir dist --target browser --sourcemap=external && tsc source/index.ts --declaration --emitDeclarationOnly --outDir dist --target esnext --module preserve --moduleResolution bundler --skipLibCheck"
+		"build": "rm -rf dist && bun build source/index.ts --outdir dist --target browser --sourcemap=external && tsc source/index.ts --declaration --emitDeclarationOnly --outDir dist --target esnext --module preserve --moduleResolution bundler --skipLibCheck && perl -pi -e 's#(from \"\\./[^\"]+)\"#$1.js\"#g' dist/*.d.ts"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.1",
 		"@types/bun": "latest",
 		"typescript": "^5"
 	},
-	"version": "2.1.0",
+	"version": "2.1.1",
 	"license": "MIT",
 	"types": "./dist/index.d.ts",
 	"files": [
