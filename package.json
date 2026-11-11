@@ -1,27 +1,40 @@
 {
 	"name": "@gin-quin/codec",
 	"description": "Very fast and fully typed binary serializer with support for unions.",
-	"module": "source/index.ts",
 	"type": "module",
-	"private": true,
-	"main": "./source/index.ts",
+	"main": "./dist/index.js",
 	"exports": {
-		"./*": "./source/*.ts"
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
 	},
 	"scripts": {
 		"test": "bun test",
-		"check": "bun biome check",
+		"format": "biome format --write",
+		"check": "biome check",
 		"benchmark": "bun ./benchmarks/index.ts",
 		"benchmark:save": "bun ./benchmarks/index.ts > ./benchmarks/benchmark-results.json",
 		"benchmark:generate-md": "bun ./benchmarks/generate-markdown.ts",
 		"benchmark:view": "bun ./benchmarks.html",
-		"deploy": "bun run test && bun x jsr publish"
+		"deploy": "bun run test && bun x jsr publish",
+		"build": "rm -rf dist && bun build source/index.ts --outdir dist --target browser --sourcemap=external && tsc source/index.ts --declaration --emitDeclarationOnly --outDir dist --target esnext --module preserve --moduleResolution bundler --skipLibCheck"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.1",
-		"@types/bun": "latest"
-	},
-	"peerDependencies": {
+		"@types/bun": "latest",
 		"typescript": "^5"
+	},
+	"version": "2.1.0",
+	"license": "MIT",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"sideEffects": false,
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Gin-Quin/codec.git"
 	}
 }

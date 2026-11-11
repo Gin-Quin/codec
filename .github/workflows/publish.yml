@@ -24,3 +24,13 @@ jobs:
       - run: bun test
 
       - run: npx jsr publish --provenance
+
+      # Node 24 ships npm >= 11.5.1, required for trusted publishing.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - run: bun run build
+
+      - run: npm publish --access public
